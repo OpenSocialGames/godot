@@ -719,7 +719,7 @@ void RichTextLabel::_input_event(InputEvent p_event) {
 		case InputEvent::KEY: {
 
 			const InputEventKey &k=p_event.key;
-			if (k.pressed) {
+			if (k.pressed && !k.mod.alt && !k.mod.shift && !k.mod.meta) {
 				bool handled=true;
 				switch(k.scancode) {
 					case KEY_PAGEUP: {
@@ -764,6 +764,7 @@ void RichTextLabel::_input_event(InputEvent p_event) {
 					} break;
 					default: handled=false;
 				}
+
 
 				if (handled)
 					accept_event();
@@ -1503,7 +1504,6 @@ Error RichTextLabel::append_bbcode(const String& p_bbcode) {
 
 void RichTextLabel::scroll_to_line(int p_line) {
 
-	p_line -= 1;
 	ERR_FAIL_INDEX(p_line,lines.size());
 	_validate_line_caches();
 	vscroll->set_val(lines[p_line].height_accum_cache-lines[p_line].height_cache);
@@ -1571,11 +1571,8 @@ bool RichTextLabel::search(const String& p_string,bool p_from_selection) {
 
 				}
 
-				if (line > 1) {
-					line-=1;
-				}
-
-				scroll_to_line(line);
+				line-=2;
+				scroll_to_line(line<0?0:line);
 
 				return true;
 			}
@@ -1688,9 +1685,10 @@ void RichTextLabel::_bind_methods() {
 
 	ObjectTypeDB::bind_method(_MD("get_v_scroll"),&RichTextLabel::get_v_scroll);
 
+	ObjectTypeDB::bind_method(_MD("scroll_to_line"),&RichTextLabel::scroll_to_line);
+
 	ObjectTypeDB::bind_method(_MD("set_tab_size","spaces"),&RichTextLabel::set_tab_size);
 	ObjectTypeDB::bind_method(_MD("get_tab_size"),&RichTextLabel::get_tab_size);
-
 
 	ObjectTypeDB::bind_method(_MD("set_selection_enabled","enabled"),&RichTextLabel::set_selection_enabled);
 	ObjectTypeDB::bind_method(_MD("is_selection_enabled"),&RichTextLabel::is_selection_enabled);

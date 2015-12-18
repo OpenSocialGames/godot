@@ -99,6 +99,8 @@ class SceneState : public Reference {
 
 	String path;
 
+	uint64_t last_modified_time;
+
 	_FORCE_INLINE_ Ref<SceneState> _get_base_scene_state() const;
 
 	static bool disable_placeholders;
@@ -126,7 +128,7 @@ public:
 	Node *instance(bool p_gen_edit_state=false) const;
 
 
-	//build-unbuild API
+	//unbuild API
 
 	int get_node_count() const;
 	StringName get_node_type(int p_idx) const;
@@ -149,6 +151,22 @@ public:
 	Array get_connection_binds(int p_idx) const;
 
 	Vector<NodePath> get_editable_instances() const;
+
+	//build API
+
+	int add_name(const StringName& p_name);
+	int add_value(const Variant& p_value);
+	int add_node_path(const NodePath& p_path);
+	int add_node(int p_parent,int p_owner,int p_type,int p_name, int p_instance);
+	void add_node_property(int p_node,int p_name,int p_value);
+	void add_node_group(int p_node,int p_group);
+	void set_base_scene(int p_idx);
+	void add_connection(int p_from,int p_to, int p_signal, int p_method, int p_flags,const Vector<int>& p_binds);
+	void add_editable_instance(const NodePath& p_path);
+
+	virtual void set_last_modified_time(uint64_t p_time) { last_modified_time=p_time; }
+	uint64_t get_last_modified_time() const { return last_modified_time; }
+
 
 	SceneState();
 };
@@ -176,8 +194,13 @@ public:
 	bool can_instance() const;
 	Node *instance(bool p_gen_edit_state=false) const;
 
-	virtual void set_path(const String& p_path,bool p_take_over=false);
+	void recreate_state();
 
+	virtual void set_path(const String& p_path,bool p_take_over=false);
+#ifdef TOOLS_ENABLED
+	virtual void set_last_modified_time(uint64_t p_time) { state->set_last_modified_time(p_time); }
+
+#endif
 	Ref<SceneState> get_state();
 
 	PackedScene();

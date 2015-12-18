@@ -32,9 +32,10 @@
 #include "key_mapping_x11.h"
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include "print_string.h"
 #include "servers/physics/physics_server_sw.h"
-
+#include "errno.h"
 
 #include "X11/Xutil.h"
 
@@ -81,7 +82,7 @@ const char * OS_X11::get_video_driver_name(int p_driver) const {
 }
 
 OS::VideoMode OS_X11::get_default_video_mode() const {
-	return OS::VideoMode(800,600,false);
+	return OS::VideoMode(1280,720,false);
 }
 
 int OS_X11::get_audio_driver_count() const {
@@ -452,9 +453,10 @@ void OS_X11::finalize() {
 //		memdelete(debugger_connection_console);
 //}
 
+	memdelete(sample_manager);
+
 	audio_server->finish();
 	memdelete(audio_server);
-	memdelete(sample_manager);
 
 	visual_server->finish();
 	memdelete(visual_server);
@@ -1671,7 +1673,7 @@ void OS_X11::close_joystick(int p_id) {
 };
 
 void OS_X11::probe_joystick(int p_id) {
-	#ifndef __FreeBSD__
+	#if !defined(__FreeBSD__) && !defined(__OpenBSD__)
 
 	if (p_id == -1) {
 
@@ -1726,7 +1728,7 @@ void OS_X11::move_window_to_foreground() {
 }
 
 void OS_X11::process_joysticks() {
-	#ifndef __FreeBSD__
+	#if !defined(__FreeBSD__) && !defined(__OpenBSD__)
 	int bytes;
 	js_event events[32];
 	InputEvent ievent;

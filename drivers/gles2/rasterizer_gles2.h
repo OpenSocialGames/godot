@@ -91,6 +91,7 @@ class RasterizerGLES2 : public Rasterizer {
 	bool srgb_supported;
 	bool float_supported;
 	bool float_linear_supported;
+	bool use_16bits_fbo;
 
 	ShadowFilterTechnique shadow_filter;
 
@@ -105,13 +106,13 @@ class RasterizerGLES2 : public Rasterizer {
 	float anisotropic_level;
 
 	bool use_half_float;
-
+	bool low_memory_2d;
 
 	Vector<float> skel_default;
 
 	Image _get_gl_image_and_format(const Image& p_image, Image::Format p_format, uint32_t p_flags,GLenum& r_gl_format,GLenum& r_gl_internal_format,int &r_gl_components,bool &r_has_alpha_cache,bool &r_compressed);
 
-	class RenderTarget;
+	struct RenderTarget;
 
 	struct Texture {
 
@@ -305,7 +306,7 @@ class RasterizerGLES2 : public Rasterizer {
 		virtual ~GeometryOwner() {}
 	};
 
-	class Mesh;
+	struct Mesh;
 
 	struct Surface : public Geometry {
 
@@ -1704,6 +1705,8 @@ public:
 	virtual void restore_framebuffer();
 
 	static RasterizerGLES2* get_singleton();
+
+	virtual void set_force_16_bits_fbo(bool p_force);
 
 	RasterizerGLES2(bool p_compress_arrays=false,bool p_keep_ram_copy=true,bool p_default_fragment_lighting=true,bool p_use_reload_hooks=false);
 	virtual ~RasterizerGLES2();

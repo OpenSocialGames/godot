@@ -76,6 +76,7 @@
 #include "editor_reimport_dialog.h"
 #include "import_settings.h"
 #include "tools/editor/editor_plugin.h"
+#include "tools/editor/editor_name_dialog.h"
 
 #include "fileserver/editor_file_server.h"
 #include "editor_resource_preview.h"
@@ -133,6 +134,7 @@ class EditorNode : public Node {
 		EDIT_UNDO,
 		EDIT_REDO,
 		EDIT_REVERT,
+		TOOLS_ORPHAN_RESOURCES,
 		RESOURCE_NEW,
 		RESOURCE_LOAD,
 		RESOURCE_SAVE,
@@ -166,6 +168,9 @@ class EditorNode : public Node {
 		SETTINGS_EXPORT_PREFERENCES,
 		SETTINGS_PREFERENCES,
 		SETTINGS_OPTIMIZED_PRESETS,
+		SETTINGS_LAYOUT_SAVE,
+		SETTINGS_LAYOUT_DELETE,
+		SETTINGS_LAYOUT_DEFAULT,
 		SETTINGS_SHOW_ANIMATION,
 		SETTINGS_LOAD_EXPORT_TEMPLATES,
 		SETTINGS_HELP,
@@ -173,6 +178,7 @@ class EditorNode : public Node {
 		SOURCES_REIMPORT,
 		DEPENDENCY_LOAD_CHANGED_IMAGES,
 		DEPENDENCY_UPDATE_IMPORTED,
+		SCENE_TAB_CLOSE,
 
 		IMPORT_PLUGIN_BASE=100,
 
@@ -217,6 +223,7 @@ class EditorNode : public Node {
 	//main tabs
 
 	Tabs *scene_tabs;
+	int tab_closing;
 
 
 	int old_split_ofs;
@@ -235,6 +242,7 @@ class EditorNode : public Node {
 	Control *viewport;
 	MenuButton *file_menu;
 	MenuButton *import_menu;
+	MenuButton *tool_menu;
 	ToolButton *export_button;
 	ToolButton *prev_scene;
 	MenuButton *object_menu;
@@ -248,6 +256,7 @@ class EditorNode : public Node {
 	ToolButton *play_scene_button;
 	ToolButton *play_custom_scene_button;
 	MenuButton *debug_button;
+	ToolButton *search_button;
 	TextureProgress *audio_vu;
 	//MenuButton *fileserver_menu;
 
@@ -266,6 +275,9 @@ class EditorNode : public Node {
 	ScenesDock *scenes_dock;
 	EditorRunNative *run_native;
 
+	HBoxContainer *search_bar;
+	LineEdit *search_box;
+
 	CreateDialog *create_dialog;
 
 	CallDialog *call_dialog;
@@ -275,6 +287,11 @@ class EditorNode : public Node {
 	AcceptDialog *accept;
 	AcceptDialog *about;
 	AcceptDialog *warning;
+
+	Ref<ConfigFile> default_theme;
+	PopupMenu *editor_layouts;
+	EditorNameDialog *layout_dialog;
+	AcceptDialog *confirm_error;
 
 	//OptimizedPresetsDialog *optimized_presets;
 	EditorSettingsDialog *settings_config_dialog;
@@ -314,7 +331,9 @@ class EditorNode : public Node {
 	CenterContainer *tabs_center;
 	EditorQuickOpen *quick_open;
 	EditorQuickOpen *quick_run;
-	Tabs *main_editor_tabs;
+
+	HBoxContainer *main_editor_button_vb;
+	Vector<ToolButton*> main_editor_buttons;
 	Vector<EditorPlugin*> editor_table;
 
 	EditorReImportDialog *reimport_dialog;
@@ -325,6 +344,7 @@ class EditorNode : public Node {
 
 	DependencyErrorDialog *dependency_error;
 	DependencyEditor *dependency_fixer;
+	OrphanResourcesDialog *orphan_resources;
 
 	TabContainer *dock_slot[DOCK_SLOT_MAX];
 	Rect2 dock_select_rect[DOCK_SLOT_MAX];
@@ -508,13 +528,30 @@ class EditorNode : public Node {
 	Dictionary _get_main_scene_state();
 	void _set_main_scene_state(Dictionary p_state);
 
+	int _get_current_main_editor();
+
 	void _save_docks();
 	void _load_docks();
+	void _save_docks_to_config(Ref<ConfigFile> p_layout, const String& p_section);
+	void _load_docks_from_config(Ref<ConfigFile> p_layout, const String& p_section);
+
+	void _update_layouts_menu();
+	void _layout_menu_option(int p_idx);
+
+	void _toggle_search_bar(bool p_pressed);
+	void _clear_search_box();
+	void _clear_undo_history();
 
 protected:
 	void _notification(int p_what);
-	static void _bind_methods();		
+	static void _bind_methods();
 public:
+
+	enum EditorTable {
+		EDITOR_2D = 0,
+		EDITOR_3D,
+		EDITOR_SCRIPT
+	};
 
 	static EditorNode* get_singleton() { return singleton; }
 

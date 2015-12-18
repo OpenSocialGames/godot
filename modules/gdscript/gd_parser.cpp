@@ -65,8 +65,10 @@ bool GDParser::_enter_indent_block(BlockNode* p_block) {
 
 
 	if (tokenizer->get_token()!=GDTokenizer::TK_COLON) {
-
-		_set_error("':' expected at end of line.");
+		// report location at the previous token (on the previous line)
+		int error_line = tokenizer->get_token_line(-1);
+		int error_column = tokenizer->get_token_column(-1);
+		_set_error("':' expected at end of line.",error_line,error_column);
 		return false;
 	}
 	tokenizer->advance();
@@ -1940,9 +1942,15 @@ void GDParser::_parse_extends(ClassNode *p_class) {
 
 	p_class->extends_used=true;
 
-	//see if inheritance happens from a file
 	tokenizer->advance();
 
+	if (tokenizer->get_token()==GDTokenizer::TK_BUILT_IN_TYPE && tokenizer->get_token_type()==Variant::OBJECT) {
+		p_class->extends_class.push_back(Variant::get_type_name(Variant::OBJECT));
+		tokenizer->advance();
+		return;
+	}
+
+	// see if inheritance happens from a file
 	if (tokenizer->get_token()==GDTokenizer::TK_CONSTANT) {
 
 		Variant constant = tokenizer->get_token_constant();
@@ -2373,10 +2381,48 @@ void GDParser::_parse_class(ClassNode *p_class) {
 
 										current_export.hint=PROPERTY_HINT_ALL_FLAGS;
 										tokenizer->advance();
-										if (tokenizer->get_token()!=GDTokenizer::TK_PARENTHESIS_CLOSE) {
-											_set_error("Expected ')' in hint.");
+
+										if (tokenizer->get_token()==GDTokenizer::TK_PARENTHESIS_CLOSE) {
+											break;
+										}
+										if (tokenizer->get_token()!=GDTokenizer::TK_COMMA)
+										{
+											_set_error("Expected ')' or ',' in bit flags hint.");
 											return;
 										}
+
+										current_export.hint=PROPERTY_HINT_FLAGS;
+										tokenizer->advance();
+
+										bool first = true;
+										while(true) {
+
+											if (tokenizer->get_token()!=GDTokenizer::TK_CONSTANT || tokenizer->get_token_constant().get_type()!=Variant::STRING) {
+												current_export=PropertyInfo();
+												_set_error("Expected a string constant in named bit flags hint.");
+												return;
+											}
+
+											String c = tokenizer->get_token_constant();
+											if (!first)
+												current_export.hint_string+=",";
+											else
+												first=false;
+
+											current_export.hint_string+=c.xml_escape();
+
+											tokenizer->advance();
+											if (tokenizer->get_token()==GDTokenizer::TK_PARENTHESIS_CLOSE)
+												break;
+
+											if (tokenizer->get_token()!=GDTokenizer::TK_COMMA) {
+												current_export=PropertyInfo();
+												_set_error("Expected ')' or ',' in named bit flags hint.");
+												return;
+											}
+											tokenizer->advance();
+										}
+
 										break;
 									}
 
@@ -2431,6 +2477,23 @@ void GDParser::_parse_class(ClassNode *p_class) {
 										break;
 									}
 
+									// range
+									if (tokenizer->get_token()==GDTokenizer::TK_IDENTIFIER && tokenizer->get_token_identifier()=="EXP") {
+
+										current_export.hint=PROPERTY_HINT_EXP_RANGE;
+										tokenizer->advance();
+
+										if (tokenizer->get_token()==GDTokenizer::TK_PARENTHESIS_CLOSE)
+											break;
+										else if (tokenizer->get_token()!=GDTokenizer::TK_COMMA) {
+											_set_error("Expected ')' or ',' in exponential range hint.");
+											return;
+										}
+										tokenizer->advance();
+									}
+									else
+										current_export.hint=PROPERTY_HINT_RANGE;
+
 									float sign=1.0;
 
 									if (tokenizer->get_token()==GDTokenizer::TK_OP_SUB) {
@@ -2444,8 +2507,6 @@ void GDParser::_parse_class(ClassNode *p_class) {
 										return;
 
 									}
-										//enumeration
-									current_export.hint=PROPERTY_HINT_RANGE;
 
 									current_export.hint_string=rtos(sign*double(tokenizer->get_token_constant()));
 									tokenizer->advance();
@@ -2548,10 +2609,32 @@ void GDParser::_parse_class(ClassNode *p_class) {
 
 									if (tokenizer->get_token()==GDTokenizer::TK_IDENTIFIER && tokenizer->get_token_identifier()=="DIR") {
 
-										current_export.hint=PROPERTY_HINT_DIR;
 										tokenizer->advance();
-										if (tokenizer->get_token()!=GDTokenizer::TK_PARENTHESIS_CLOSE) {
-											_set_error("Expected ')' in hint.");
+
+										if (tokenizer->get_token()==GDTokenizer::TK_PARENTHESIS_CLOSE)
+											current_export.hint=PROPERTY_HINT_DIR;
+										else if (tokenizer->get_token()==GDTokenizer::TK_COMMA ) {
+
+											tokenizer->advance();
+
+											if (tokenizer->get_token()!=GDTokenizer::TK_IDENTIFIER || !(tokenizer->get_token_identifier()=="GLOBAL")) {
+												_set_error("Expected 'GLOBAL' after comma in directory hint.");
+												return;
+											}
+											if (!p_class->tool) {
+												_set_error("Global filesystem hints may only be used in tool scripts.");
+												return;
+											}
+											current_export.hint=PROPERTY_HINT_GLOBAL_DIR;
+											tokenizer->advance();
+
+											if (tokenizer->get_token()!=GDTokenizer::TK_PARENTHESIS_CLOSE) {
+												_set_error("Expected ')' in hint.");
+												return;
+											}
+										}
+										else {
+											_set_error("Expected ')' or ',' in hint.");
 											return;
 										}
 										break;
@@ -2565,9 +2648,32 @@ void GDParser::_parse_class(ClassNode *p_class) {
 										if (tokenizer->get_token()==GDTokenizer::TK_COMMA) {
 
 											tokenizer->advance();
+
+											if (tokenizer->get_token()==GDTokenizer::TK_IDENTIFIER && tokenizer->get_token_identifier()=="GLOBAL") {
+
+												if (!p_class->tool) {
+													_set_error("Global filesystem hints may only be used in tool scripts.");
+													return;
+												}
+												current_export.hint=PROPERTY_HINT_GLOBAL_FILE;
+												tokenizer->advance();
+
+												if (tokenizer->get_token()==GDTokenizer::TK_PARENTHESIS_CLOSE)
+													break;
+												else if (tokenizer->get_token()==GDTokenizer::TK_COMMA)
+													tokenizer->advance();
+												else {
+													_set_error("Expected ')' or ',' in hint.");
+													return;
+												}
+											}
+
 											if (tokenizer->get_token()!=GDTokenizer::TK_CONSTANT || tokenizer->get_token_constant().get_type()!=Variant::STRING) {
 
-												_set_error("Expected string constant with filter");
+												if (current_export.hint==PROPERTY_HINT_GLOBAL_FILE)
+													_set_error("Expected string constant with filter");
+												else
+													_set_error("Expected 'GLOBAL' or string constant with filter");
 												return;
 											}
 											current_export.hint_string=tokenizer->get_token_constant();

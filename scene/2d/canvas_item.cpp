@@ -309,6 +309,15 @@ void CanvasItem::hide() {
 	_change_notify("visibility/visible");
 }
 
+void CanvasItem::set_hidden(bool p_hidden) {
+	
+	if (hidden == p_hidden) {
+		return;
+	}
+	
+	_set_visible_(!p_hidden);
+}
+
 
 Variant CanvasItem::edit_get_state() const {
 
@@ -700,7 +709,7 @@ void CanvasItem::draw_circle(const Point2& p_pos, float p_radius, const Color& p
 
 }
 
-void CanvasItem::draw_texture(const Ref<Texture>& p_texture,const Point2& p_pos) {
+void CanvasItem::draw_texture(const Ref<Texture>& p_texture,const Point2& p_pos,const Color& p_modulate) {
 
 	if (!drawing) {
 		ERR_EXPLAIN("Drawing is only allowed inside NOTIFICATION_DRAW, _draw() function or 'draw' signal.");
@@ -709,7 +718,7 @@ void CanvasItem::draw_texture(const Ref<Texture>& p_texture,const Point2& p_pos)
 
 	ERR_FAIL_COND(p_texture.is_null());
 
-	p_texture->draw(canvas_item,p_pos);
+	p_texture->draw(canvas_item,p_pos,p_modulate);
 }
 
 void CanvasItem::draw_texture_rect(const Ref<Texture>& p_texture,const Rect2& p_rect, bool p_tile,const Color& p_modulate, bool p_transpose) {
@@ -1043,6 +1052,7 @@ void CanvasItem::_bind_methods() {
 	ObjectTypeDB::bind_method(_MD("is_hidden"),&CanvasItem::is_hidden);
 	ObjectTypeDB::bind_method(_MD("show"),&CanvasItem::show);
 	ObjectTypeDB::bind_method(_MD("hide"),&CanvasItem::hide);
+	ObjectTypeDB::bind_method(_MD("set_hidden","hidden"),&CanvasItem::set_hidden);
 
 	ObjectTypeDB::bind_method(_MD("update"),&CanvasItem::update);
 
@@ -1146,6 +1156,8 @@ Matrix32 CanvasItem::get_canvas_transform() const {
 
 	if (canvas_layer)
 		return canvas_layer->get_transform();
+	else if (get_parent()->cast_to<CanvasItem>())
+		return get_parent()->cast_to<CanvasItem>()->get_canvas_transform();
 	else
 		return get_viewport()->get_canvas_transform();
 

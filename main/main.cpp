@@ -95,6 +95,7 @@ static TranslationServer *translation_server = NULL;
 
 static OS::VideoMode video_mode;
 static bool init_maximized=false;
+static bool init_windowed=false;
 static bool init_fullscreen=false;
 static bool init_use_custom_pos=false;
 static bool debug_collisions=false;
@@ -146,6 +147,7 @@ void Main::print_help(const char* p_binary) {
 	OS::get_singleton()->print("\t-p XxY\t : Request Window Position\n");
 	OS::get_singleton()->print("\t-f\t\t : Request Fullscreen\n");
 	OS::get_singleton()->print("\t-mx\t\t Request Maximized\n");
+	OS::get_singleton()->print("\t-w\t\t Request Windowed\n");
 	OS::get_singleton()->print("\t-vd DRIVER\t : Video Driver (");
 	for (int i=0;i<OS::get_singleton()->get_video_driver_count();i++) {
 		
@@ -354,6 +356,9 @@ Error Main::setup(const char *execpath,int argc, char *argv[],bool p_second_phas
 		} else if (I->get()=="-mx") { // video driver
 
 			init_maximized=true;
+		} else if (I->get()=="-w") { // video driver
+
+			init_windowed=true;
 		} else if (I->get()=="-vd") { // video driver
 		
 			if (I->next()) {
@@ -432,7 +437,6 @@ Error Main::setup(const char *execpath,int argc, char *argv[],bool p_second_phas
 		} else if (I->get()=="-e" || I->get()=="-editor") { // fonud editor
 
 			editor=true;
-			init_maximized=true;
 		} else if (I->get()=="-nowindow") { // fullscreen
 
 			OS::get_singleton()->set_no_window_mode(true);
@@ -649,6 +653,7 @@ Error Main::setup(const char *execpath,int argc, char *argv[],bool p_second_phas
 
 	if (editor) {
 		main_args.push_back("-editor");
+		init_maximized=true;
 		use_custom_res=false;
 	}
 
@@ -796,7 +801,6 @@ Error Main::setup(const char *execpath,int argc, char *argv[],bool p_second_phas
 	main_args.clear();
 	
 	print_help(execpath);
-	
 
 	if (performance)
 		memdelete(performance);
@@ -812,6 +816,8 @@ Error Main::setup(const char *execpath,int argc, char *argv[],bool p_second_phas
 		memdelete(packed_data);
 	if (file_access_network_client)
 		memdelete(file_access_network_client);
+	if(path_remap)
+		memdelete(path_remap);
 
 // Note 1: *zip_packed_data live into *packed_data
 // Note 2: PackedData::~PackedData destroy this.
@@ -820,7 +826,7 @@ Error Main::setup(const char *execpath,int argc, char *argv[],bool p_second_phas
 //		memdelete( zip_packed_data );
 //#endif
 
-
+	unregister_core_driver_types();
 	unregister_core_types();
 	
 	OS::get_singleton()->_cmdline.clear();
@@ -840,11 +846,7 @@ Error Main::setup2() {
 	if (init_use_custom_pos) {
 		OS::get_singleton()->set_window_position(init_custom_pos);
 	}
-	if (init_maximized) {
-		OS::get_singleton()->set_window_maximized(true);
-	} else if (init_fullscreen) {
-		OS::get_singleton()->set_window_fullscreen(true);
-	}
+
 
 	register_core_singletons();
 
@@ -858,8 +860,12 @@ Error Main::setup2() {
 	if (init_screen!=-1) {
 		OS::get_singleton()->set_current_screen(init_screen);
 	}
-	if (init_maximized) {
+	if (init_windowed) {
+		//do none..
+	} else if (init_maximized) {
 		OS::get_singleton()->set_window_maximized(true);
+	} else if (init_fullscreen) {
+		OS::get_singleton()->set_window_fullscreen(true);
 	}
 	MAIN_PRINT("Main: Load Remaps");
 
@@ -869,21 +875,14 @@ Error Main::setup2() {
 		String boot_logo_path=GLOBAL_DEF("application/boot_splash",String());
 		bool boot_logo_scale=GLOBAL_DEF("application/boot_splash_fullsize",true);
 		Globals::get_singleton()->set_custom_property_info("application/boot_splash",PropertyInfo(Variant::STRING,"application/boot_splash",PROPERTY_HINT_FILE,"*.png"));
-		print_line("BOOT SPLASH: "+boot_logo_path);
 
 		Image boot_logo;
 
 		boot_logo_path = boot_logo_path.strip_edges();
-		print_line("BOOT SPLASH IS : "+boot_logo_path);
 
 		if (boot_logo_path!=String() /*&& FileAccess::exists(boot_logo_path)*/) {
+			print_line("Boot splash path: "+boot_logo_path);
 			Error err = boot_logo.load(boot_logo_path);
-			if (err!=OK) {
-				print_line("ËRROR LOADING BOOT LOGO SPLASH :"+boot_logo_path);
-			} else {
-				print_line("BOOT SPLASH OK!");
-
-			}
 		}
 
 		if (!boot_logo.empty()) {
@@ -900,7 +899,7 @@ Error Main::setup2() {
 		} else {
 #ifndef NO_DEFAULT_BOOT_LOGO
 
-			MAIN_PRINT("Main: Create botsplash");
+			MAIN_PRINT("Main: Create bootsplash");
 			Image splash(boot_splash_png);
 
 			MAIN_PRINT("Main: ClearColor");
@@ -943,10 +942,10 @@ Error Main::setup2() {
 
 	if (String(Globals::get_singleton()->get("display/custom_mouse_cursor"))!=String()) {
 
-		print_line("use custom cursor");
+		//print_line("use custom cursor");
 		Ref<Texture> cursor=ResourceLoader::load(Globals::get_singleton()->get("display/custom_mouse_cursor"));
 		if (cursor.is_valid()) {
-			print_line("loaded ok");
+		//	print_line("loaded ok");
 			Vector2 hotspot = Globals::get_singleton()->get("display/custom_mouse_cursor_hotspot");
 			Input::get_singleton()->set_custom_mouse_cursor(cursor,hotspot);
 		}
@@ -1007,8 +1006,21 @@ bool Main::start() {
 	bool export_debug=false;
 	List<String> args = OS::get_singleton()->get_cmdline_args();
 	for (int i=0;i<args.size();i++) {
+		//parameters that do not have an argument to the right
+		if (args[i]=="-nodocbase") {
+			doc_base=false;
+		} else if (args[i]=="-noquit") {
+			noquit=true;
+		} else if (args[i]=="-convert_old") {
+			convert_old=true;
+		} else if (args[i]=="-editor" || args[i]=="-e") {
+			editor=true;
+		} else if (args[i].length() && args[i][0] != '-' && game_path == "") {
+			game_path=args[i];
+		}
 		//parameters that have an argument to the right
-		if (i < (args.size()-1)) {
+		else if (i < (args.size()-1)) {
+			bool parsed_pair=true;
 			if (args[i]=="-doctool") {
 				doc_tool=args[i+1];
 			} else if (args[i]=="-script" || args[i]=="-s") {
@@ -1037,20 +1049,13 @@ bool Main::start() {
 			} else if (args[i]=="-dumpstrings") {
 				editor=true; //needs editor
 				dumpstrings=args[i+1];
+			} else {
+				// The parameter does not match anything known, don't skip the next argument
+				parsed_pair=false;
 			}
-			i++;
-		}
-		//parameters that do not have an argument to the right
-		if (args[i]=="-nodocbase") {
-			doc_base=false;
-		} else if (args[i]=="-noquit") {
-			noquit=true;
-		} else if (args[i]=="-convert_old") {
-			convert_old=true;
-		} else if (args[i]=="-editor" || args[i]=="-e") {
-			editor=true;
-		} else if (args[i].length() && args[i][0] != '-' && game_path == "") {
-			game_path=args[i];
+			if (parsed_pair) {
+				i++;
+			}
 		}
 	}
 
@@ -1086,7 +1091,18 @@ bool Main::start() {
 
 #endif
 
-	if(script=="" && game_path=="" && !editor && String(GLOBAL_DEF("application/main_scene",""))!="") {
+	if (_export_platform!="") {
+		if (game_path=="") {
+			String err="Command line param ";
+			err+=export_debug?"-export_debug":"-export";
+			err+=" passed but no destination path given.\n";
+			err+="Please specify the binary's file path to export to. Aborting export.";
+			ERR_PRINT(err.utf8().get_data());
+			return false;
+		}
+	}
+
+	if(script=="" && game_path=="" && String(GLOBAL_DEF("application/main_scene",""))!="") {
 		game_path=GLOBAL_DEF("application/main_scene","");
 	}
 

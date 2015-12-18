@@ -39,6 +39,7 @@
 #include "scene/gui/texture_frame.h"
 #include "scene/gui/text_edit.h"
 #include "scene/gui/check_button.h"
+#include "scene/gui/split_container.h"
 #include "scene_tree_editor.h"
 
 /**
@@ -147,6 +148,7 @@ class PropertyEditor : public Control {
 	Tree *tree;
 	Label *top_label;
 	//Object *object;
+	LineEdit *search_box;
 
 	Object* obj;
 
@@ -160,8 +162,11 @@ class PropertyEditor : public Control {
 	bool keying;
 	bool read_only;
 	bool show_categories;
+	bool show_type_icons;
 	float refresh_countdown;
 	bool use_doc_hints;
+	bool use_filter;
+	bool subsection_selectable;
 
 	HashMap<String,String> pending;
 	String selected_property;
@@ -201,6 +206,8 @@ class PropertyEditor : public Control {
 	void _refresh_item(TreeItem *p_item);
 	void _set_range_def(Object *p_item, String prop, float p_frame);
 
+	void _filter_changed(const String& p_text);
+
 	UndoRedo *undo_redo;
 protected:
 
@@ -230,10 +237,40 @@ public:
 
 	void set_show_categories(bool p_show);
 	void set_use_doc_hints(bool p_enable) { use_doc_hints=p_enable; }
-	
+
+	void set_use_filter(bool p_use);
+	void register_text_enter(Node *p_line_edit);
+
+	void set_subsection_selectable(bool p_selectable);
+
 	PropertyEditor();	
 	~PropertyEditor();
 
+};
+
+
+class SectionedPropertyEditorFilter;
+
+class SectionedPropertyEditor : public HBoxContainer {
+
+
+	OBJ_TYPE(SectionedPropertyEditor,HBoxContainer);
+	ItemList *sections;
+	SectionedPropertyEditorFilter *filter;
+	PropertyEditor *editor;
+
+
+	static void _bind_methods();
+	void _section_selected(int p_which);
+
+public:
+
+	PropertyEditor *get_property_editor();
+	void edit(Object* p_object);
+	String get_full_item_path(const String& p_item);
+
+	SectionedPropertyEditor();
+	~SectionedPropertyEditor();
 };
 
 #endif
