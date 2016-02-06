@@ -45,16 +45,18 @@ def can_build():
 		print("xinerama not found.. x11 disabled.")
 		return False
 
-	
+
 	return True # X11 enabled
   
 def get_opts():
 
 	return [
 	('use_llvm','Use llvm compiler','no'),
+	('use_static_cpp','link stdc++ statically','no'),
 	('use_sanitizer','Use llvm compiler sanitize address','no'),
 	('use_leak_sanitizer','Use llvm compiler sanitize memory leaks','no'),
 	('pulseaudio','Detect & Use pulseaudio','yes'),
+	('gamepad','Gamepad support, requires libudev and libevdev','yes'),
 	('new_wm_api', 'Use experimental window management API','no'),
 	('debug_release', 'Add debug symbols to release version','no'),
 	]
@@ -145,12 +147,29 @@ def configure(env):
 			env.Append(CPPPATH=['#tools/freetype/freetype/include'])
 
 
-
-	
 	env.Append(CPPFLAGS=['-DOPENGL_ENABLED','-DGLEW_ENABLED'])
-	if platform.system() == 'Linux':
+
+	if os.system("pkg-config --exists alsa")==0:
+		print("Enabling ALSA")
 		env.Append(CPPFLAGS=["-DALSA_ENABLED"])
 		env.Append(LIBS=['asound'])
+	else:
+		print("ALSA libraries not found, disabling driver")
+
+	if (env["gamepad"]=="yes" and platform.system() == "Linux"):
+		# pkg-config returns 0 when the lib exists...
+		found_udev = not os.system("pkg-config --exists libudev")
+		
+		if (found_udev):
+			print("Enabling gamepad support with udev")
+			env.Append(CPPFLAGS=["-DJOYDEV_ENABLED"])
+			env.ParseConfig('pkg-config libudev --cflags --libs')
+		else:
+			print("libudev development libraries not found")
+
+			print("Some libraries are missing for the required gamepad support, aborting!")
+			print("Install the mentioned libraries or build with 'gamepad=no' to disable gamepad support.")
+			sys.exit(255)
 
 	if (env["pulseaudio"]=="yes"):
 		if not os.system("pkg-config --exists libpulse-simple"):
@@ -184,6 +203,9 @@ def configure(env):
 	if(env["new_wm_api"]=="yes"):
 		env.Append(CPPFLAGS=['-DNEW_WM_API'])
 		env.ParseConfig('pkg-config xinerama --cflags --libs')
+
+	if (env["use_static_cpp"]=="yes"):
+		env.Append(LINKFLAGS=['-static-libstdc++'])
 
 	env["x86_opt_gcc"]=True
 

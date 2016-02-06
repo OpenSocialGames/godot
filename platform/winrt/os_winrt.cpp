@@ -5,7 +5,7 @@
 /*                           GODOT ENGINE                                */
 /*                    http://www.godotengine.org                         */
 /*************************************************************************/
-/* Copyright (c) 2007-2014 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2007-2016 Juan Linietsky, Ariel Manzur.                 */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -43,7 +43,6 @@
 #include "servers/audio/audio_server_sw.h"
 #include "servers/visual/visual_server_wrap_mt.h"
 
-#include "os/pc_joystick_map.h"
 #include "os/memory_pool_dynamic_prealloc.h"
 #include "globals.h"
 #include "io/marshalls.h"
@@ -345,8 +344,7 @@ void OSWinrt::finalize_core() {
 
 	if (mempool_dynamic)
 		memdelete( mempool_dynamic );
-	if (mempool_static)
-		delete mempool_static;
+	delete mempool_static;
 
 }
 

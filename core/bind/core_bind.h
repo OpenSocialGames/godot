@@ -208,7 +208,7 @@ public:
 	Dictionary get_time(bool utc) const;
 	Dictionary get_time_zone_info() const;
 	uint64_t get_unix_time() const;
-	uint64_t get_system_time_msec() const;
+	uint64_t get_system_time_secs() const;
 
 	int get_static_memory_usage() const;
 	int get_static_memory_peak_usage() const;
@@ -262,10 +262,15 @@ public:
 	void set_screen_orientation(ScreenOrientation p_orientation);
 	ScreenOrientation get_screen_orientation() const;
 
+	void set_keep_screen_on(bool p_enabled);
+	bool is_keep_screen_on() const;
+
 	void set_time_scale(float p_scale);
 	float get_time_scale();
 
 	bool is_ok_left_and_cancel_right() const;
+
+	Error set_thread_name(const String& p_name);
 
 	static _OS *get_singleton() { return singleton; }
 
@@ -329,6 +334,7 @@ public:
 		READ=1,
 		WRITE=2,
 		READ_WRITE=3,
+		WRITE_READ=7,
 	};
 
 	Error open_encrypted(const String& p_path, int p_mode_flags,const Vector<uint8_t>& p_key);
@@ -386,7 +392,7 @@ public:
 	virtual void store_pascal_string(const String& p_string);
 	virtual String get_pascal_string();
 
-	Vector<String> get_csv_line() const;
+	Vector<String> get_csv_line(String delim=",") const;
 
 
 	void store_buffer(const DVector<uint8_t>& p_buffer); ///< store an array of bytes
@@ -508,7 +514,6 @@ protected:
 	Object *target_instance;
 	StringName target_method;
 	Thread *thread;
-	String name;
 	static void _bind_methods();
 	static void _start_func(void *ud);
 public:
@@ -524,7 +529,6 @@ public:
 	String get_id() const;
 	bool is_active() const;
 	Variant wait_to_finish();
-	Error set_name(const String& p_name);
 
 	_Thread();
 	~_Thread();

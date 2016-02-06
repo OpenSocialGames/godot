@@ -5,7 +5,7 @@
 /*                           GODOT ENGINE                                */
 /*                    http://www.godotengine.org                         */
 /*************************************************************************/
-/* Copyright (c) 2007-2015 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2007-2016 Juan Linietsky, Ariel Manzur.                 */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -196,6 +196,7 @@ public:
 	void set_edited_scene_live_edit_root(const NodePath& p_root);
 	NodePath get_edited_scene_live_edit_root();
 	bool check_and_update_scene(int p_idx);
+	void move_edited_scene_to_index(int p_idx);
 
 
 	void set_plugin_window_layout(Ref<ConfigFile> p_layout);

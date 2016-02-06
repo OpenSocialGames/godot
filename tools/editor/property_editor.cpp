@@ -5,7 +5,7 @@
 /*                           GODOT ENGINE                                */
 /*                    http://www.godotengine.org                         */
 /*************************************************************************/
-/* Copyright (c) 2007-2015 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2007-2016 Juan Linietsky, Ariel Manzur.                 */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -595,7 +595,7 @@ bool CustomPropertyEditor::edit(Object* p_owner,const String& p_name,Variant::Ty
 			color_picker->show();
 			color_picker->set_edit_alpha(hint!=PROPERTY_HINT_COLOR_NO_ALPHA);
 			color_picker->set_color(v);
-			set_size( Size2(350, color_picker->get_combined_minimum_size().height+10));
+			set_size( Size2(300, color_picker->get_combined_minimum_size().height+10));
 			/*
 			int ofs=80;
 			int m=10;
@@ -714,7 +714,7 @@ bool CustomPropertyEditor::edit(Object* p_owner,const String& p_name,Variant::Ty
 				RES r = v;
 				if (r.is_valid() && r->get_path().is_resource_file() && r->get_import_metadata().is_valid()) {
 					menu->add_separator();
-					menu->add_icon_item(get_icon("Reload","EditorIcons"),"Re-Import",OBJ_MENU_REIMPORT);
+					menu->add_icon_item(get_icon("ReloadSmall","EditorIcons"),"Re-Import",OBJ_MENU_REIMPORT);
 				}
 				/*if (r.is_valid() && r->get_path().is_resource_file()) {
 					menu->set_item_tooltip(1,r->get_path());
@@ -727,7 +727,17 @@ bool CustomPropertyEditor::edit(Object* p_owner,const String& p_name,Variant::Ty
 
 
 			RES cb=EditorSettings::get_singleton()->get_resource_clipboard();
-			bool paste_valid=cb.is_valid() && (hint_text=="" || ObjectTypeDB::is_type(cb->get_type(),hint_text));
+			bool paste_valid=false;
+			if (cb.is_valid()) {
+				if (hint_text=="")
+					paste_valid=true;
+				else
+					for (int i = 0; i < hint_text.get_slice_count(",");i++)
+						if (ObjectTypeDB::is_type(cb->get_type(),hint_text.get_slice(",",i))) {
+							paste_valid=true;
+							break;
+						}
+			}
 
 			if (!RES(v).is_null() || paste_valid) {
 				menu->add_separator();
@@ -927,6 +937,7 @@ void CustomPropertyEditor::_node_path_selected(NodePath p_path) {
 		if (!node) {
 			v=p_path;
 			emit_signal("variant_changed");
+			call_deferred("hide"); //to not mess with dialogs
 			return;
 		}
 
@@ -938,6 +949,7 @@ void CustomPropertyEditor::_node_path_selected(NodePath p_path) {
 
 	v=p_path;
 	emit_signal("variant_changed");
+	call_deferred("hide"); //to not mess with dialogs
 
 }
 
@@ -1040,6 +1052,7 @@ void CustomPropertyEditor::_action_pressed(int p_which) {
 
 				v=NodePath();
 				emit_signal("variant_changed");
+				hide();
 			}
 		} break;
 		case Variant::OBJECT: {
@@ -2032,7 +2045,7 @@ void PropertyEditor::set_item_text(TreeItem *p_item, int p_type, const String& p
 			if (img.empty())
 				p_item->set_text(1,"[Image (empty)]");
 			else
-				p_item->set_text(1,"[Image "+itos(img.get_width())+"x"+itos(img.get_height())+"]");
+				p_item->set_text(1,"[Image "+itos(img.get_width())+"x"+itos(img.get_height())+"-"+String(Image::get_format_name(img.get_format()))+"]");
 
 		} break;
 		case Variant::NODE_PATH: {
@@ -2110,6 +2123,75 @@ void PropertyEditor::set_item_text(TreeItem *p_item, int p_type, const String& p
 }
 
 
+void PropertyEditor::_check_reload_status(const String&p_name, TreeItem* item) {
+
+	bool has_reload=false;
+	int found=-1;
+	bool is_disabled=false;
+
+	for(int i=0;i<item->get_button_count(1);i++) {
+
+		if (item->get_button_id(1,i)==3) {
+			found=i;
+			is_disabled=item->is_button_disabled(1,i);
+			break;
+		}
+	}
+
+	if (_might_be_in_instance()) {
+
+
+		Variant vorig;
+		Dictionary d=item->get_metadata(0);
+		int usage = d.has("usage")?int(int(d["usage"])&(PROPERTY_USAGE_STORE_IF_NONONE|PROPERTY_USAGE_STORE_IF_NONZERO)):0;
+
+
+		if (_get_instanced_node_original_property(p_name,vorig) || usage) {
+			Variant v = obj->get(p_name);
+
+			bool changed = _is_property_different(v,vorig,usage);
+
+			//if ((found!=-1 && !is_disabled)!=changed) {
+
+				if (changed) {
+
+					has_reload=true;
+				} else {
+
+				}
+
+			//}
+
+		}		
+
+	}
+
+	if (!has_reload && !obj->get_script().is_null()) {
+		Ref<Script> scr = obj->get_script();
+		Variant orig_value;
+		if (scr->get_property_default_value(p_name,orig_value)) {
+			if (orig_value!=obj->get(p_name)) {
+				has_reload=true;
+			}
+		}
+	}
+
+	//print_line("found: "+itos(found)+" has reload: "+itos(has_reload)+" is_disabled "+itos(is_disabled));
+	if (found!=-1 && !has_reload) {
+
+		if (!is_disabled) {
+			item->erase_button(1,found);
+			if (item->get_cell_mode(1)==TreeItem::CELL_MODE_RANGE && item->get_text(1)==String()) {
+				item->add_button(1,get_icon("ReloadEmpty","EditorIcons"),3,true);
+			}
+		}
+	} else if (found==-1 && has_reload) {
+		item->add_button(1,get_icon("ReloadSmall","EditorIcons"),3);
+	} else if (found!=-1 && has_reload && is_disabled) {
+		item->erase_button(1,found);
+		item->add_button(1,get_icon("ReloadSmall","EditorIcons"),3);
+	}
+}
 
 void PropertyEditor::_notification(int p_what) {
 
@@ -2151,43 +2233,8 @@ void PropertyEditor::_notification(int p_what) {
 				if (!item)
 					continue;
 
-				if (_might_be_in_instance()) {
+				_check_reload_status(*k,item);
 
-
-					Variant vorig;
-					Dictionary d=item->get_metadata(0);
-					int usage = d.has("usage")?int(int(d["usage"])&(PROPERTY_USAGE_STORE_IF_NONONE|PROPERTY_USAGE_STORE_IF_NONZERO)):0;
-
-
-					if (_get_instanced_node_original_property(*k,vorig) || usage) {
-						Variant v = obj->get(*k);
-
-						int found=-1;
-						for(int i=0;i<item->get_button_count(1);i++) {
-
-							if (item->get_button_id(1,i)==3) {
-								found=i;
-								break;
-							}
-						}
-
-						bool changed = _is_property_different(v,vorig,usage);
-
-						if ((found!=-1)!=changed) {
-
-							if (changed) {
-
-								item->add_button(1,get_icon("Reload","EditorIcons"),3);
-							} else {
-
-								item->erase_button(1,found);
-							}
-
-						}
-
-					}
-
-				}
 				Dictionary d=item->get_metadata(0);
 				set_item_text(item,d["type"],d["name"],d["hint"],d["hint_text"]);
 			}
@@ -2254,23 +2301,30 @@ void PropertyEditor::_refresh_item(TreeItem *p_item) {
 
 	if (name!=String()) {
 
+
+		_check_reload_status(name,p_item);
+#if 0
+		bool has_reload=false;
+
+		int found=-1;
+		for(int i=0;i<p_item->get_button_count(1);i++) {
+
+			if (p_item->get_button_id(1,i)==3) {
+				found=i;
+				break;
+			}
+		}
+
 		if (_might_be_in_instance()) {
 
 			Variant vorig;
 			Dictionary d=p_item->get_metadata(0);
 			int usage = d.has("usage")?int(int(d["usage"])&(PROPERTY_USAGE_STORE_IF_NONONE|PROPERTY_USAGE_STORE_IF_NONZERO)):0;
 
+
 			if (_get_instanced_node_original_property(name,vorig) || usage) {
 				Variant v = obj->get(name);
 
-				int found=-1;
-				for(int i=0;i<p_item->get_button_count(1);i++) {
-
-					if (p_item->get_button_id(1,i)==3) {
-						found=i;
-						break;
-					}
-				}
 
 				bool changed = _is_property_different(v,vorig,usage);
 
@@ -2278,10 +2332,11 @@ void PropertyEditor::_refresh_item(TreeItem *p_item) {
 
 					if (changed) {
 
-						p_item->add_button(1,get_icon("Reload","EditorIcons"),3);
+						has_reload=true;
+
 					} else {
 
-						p_item->erase_button(1,found);
+						//p_item->erase_button(1,found);
 					}
 
 				}
@@ -2290,6 +2345,22 @@ void PropertyEditor::_refresh_item(TreeItem *p_item) {
 
 		}
 
+		if (!has_reload && !obj->get_script().is_null()) {
+			Ref<Script> scr = obj->get_script();
+			Variant orig_value;
+			if (scr->get_property_default_value(name,orig_value)) {
+				if (orig_value!=obj->get(name)) {
+					has_reload=true;
+				}
+			}
+		}
+
+		if (!has_reload && found!=-1) {
+			p_item->erase_button(1,found);
+		} else if (has_reload && found==-1) {
+			p_item->add_button(1,get_icon("ReloadSmall","EditorIcons"),3);
+		}
+#endif
 		Dictionary d=p_item->get_metadata(0);
 		set_item_text(p_item,d["type"],d["name"],d["hint"],d["hint_text"]);
 	}
@@ -2946,7 +3017,7 @@ void PropertyEditor::update_tree() {
 				if (img.empty())
 					item->set_text(1,"[Image (empty)]");
 				else
-					item->set_text(1,"[Image "+itos(img.get_width())+"x"+itos(img.get_height())+"]");
+					item->set_text(1,"[Image "+itos(img.get_width())+"x"+itos(img.get_height())+"-"+String(Image::get_format_name(img.get_format()))+"]");
 				if (show_type_icons)
 					item->set_icon( 0,get_icon("Image","EditorIcons") );
 
@@ -3030,22 +3101,43 @@ void PropertyEditor::update_tree() {
 			}
 		}
 
-		if (_might_be_in_instance()) {
+		bool has_reload=false;
+
+		bool mbi = _might_be_in_instance();
+		if (mbi) {
 
 			Variant vorig;
 			Dictionary d=item->get_metadata(0);
 			int usage = d.has("usage")?int(int(d["usage"])&(PROPERTY_USAGE_STORE_IF_NONONE|PROPERTY_USAGE_STORE_IF_NONZERO)):0;
 			if (_get_instanced_node_original_property(p.name,vorig) || usage) {
 				Variant v = obj->get(p.name);
-				
+
 
 				if (_is_property_different(v,vorig,usage)) {
 					//print_line("FOR "+String(p.name)+" RELOAD WITH: "+String(v)+"("+Variant::get_type_name(v.get_type())+")=="+String(vorig)+"("+Variant::get_type_name(vorig.get_type())+")");
-					item->add_button(1,get_icon("Reload","EditorIcons"),3);
+					item->add_button(1,get_icon("ReloadSmall","EditorIcons"),3);
+					has_reload=true;
 				}
 			}
 
 		}
+
+		if (!has_reload && !obj->get_script().is_null()) {
+			Ref<Script> scr = obj->get_script();
+			Variant orig_value;
+			if (scr->get_property_default_value(p.name,orig_value)) {
+				if (orig_value!=obj->get(p.name)) {
+					item->add_button(1,get_icon("ReloadSmall","EditorIcons"),3);
+					has_reload=true;
+				}
+			}
+		}
+
+		if (mbi && !has_reload && item->get_cell_mode(1)==TreeItem::CELL_MODE_RANGE && item->get_text(1)==String()) {
+				item->add_button(1,get_icon("ReloadEmpty","EditorIcons"),3,true);
+		}
+
+
 
 	}
 }
@@ -3337,8 +3429,6 @@ void PropertyEditor::_edit_button(Object *p_item, int p_column, int p_button) {
 		call_deferred("_set_range_def",ti,prop,ti->get_range(p_column)+1.0);
 	} else if (p_button==3) {
 
-		if (!_might_be_in_instance())
-			return;
 		if (!d.has("name"))
 			return;
 
@@ -3346,10 +3436,20 @@ void PropertyEditor::_edit_button(Object *p_item, int p_column, int p_button) {
 
 		Variant vorig;
 
-		if (_get_instanced_node_original_property(prop,vorig)) {
+		if (_might_be_in_instance() && _get_instanced_node_original_property(prop,vorig)) {
 
 			_edit_set(prop,vorig);
+			return;
 		}
+
+		if  (!obj->get_script().is_null()) {
+			Ref<Script> scr = obj->get_script();
+			Variant orig_value;
+			if (scr->get_property_default_value(prop,orig_value)) {
+				_edit_set(prop,orig_value);
+			}
+		}
+
 
 	} else {
 
@@ -3618,9 +3718,7 @@ PropertyEditor::PropertyEditor() {
 
 	capitalize_paths=true;
 	autoclear=false;
-	tree->set_column_title(0,"Property");
-	tree->set_column_title(1,"Value");
-	tree->set_column_titles_visible(true);
+	tree->set_column_titles_visible(false);
 
 	keying=false;
 	read_only=false;
@@ -3739,6 +3837,11 @@ void SectionedPropertyEditor::_section_selected(int p_which) {
 	filter->set_section( sections->get_item_metadata(p_which) );
 }
 
+String SectionedPropertyEditor::get_current_section() const {
+
+	return sections->get_item_metadata( sections->get_current() );
+}
+
 String SectionedPropertyEditor::get_full_item_path(const String& p_item) {
 
 	String base = sections->get_item_metadata( sections->get_current() );
@@ -3820,7 +3923,7 @@ SectionedPropertyEditor::SectionedPropertyEditor() {
 	right_vb->add_margin_child("Properties:",editor,true);
 
 	editor->get_scene_tree()->set_column_titles_visible(false);
-	add_child(editor);
+
 
 	editor->hide_top_label();
 

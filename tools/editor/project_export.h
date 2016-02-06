@@ -5,7 +5,7 @@
 /*                           GODOT ENGINE                                */
 /*                    http://www.godotengine.org                         */
 /*************************************************************************/
-/* Copyright (c) 2007-2015 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2007-2016 Juan Linietsky, Ariel Manzur.                 */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -70,6 +70,7 @@ private:
 
 	TabContainer *sections;
 	bool updating_tree;
+	bool pending_update_tree;
 	AcceptDialog *error;
 	ConfirmationDialog *confirm;
 
@@ -203,6 +204,7 @@ public:
 
 	Error export_platform(const String& p_platform, const String& p_path, bool p_debug,const String& p_password,bool p_quit_after=false);
 
+	void popup_export();
 	ProjectExportDialog(EditorNode *p_editor);
 	~ProjectExportDialog();
 };

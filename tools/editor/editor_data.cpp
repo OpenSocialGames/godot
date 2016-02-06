@@ -5,7 +5,7 @@
 /*                           GODOT ENGINE                                */
 /*                    http://www.godotengine.org                         */
 /*************************************************************************/
-/* Copyright (c) 2007-2015 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2007-2016 Juan Linietsky, Ariel Manzur.                 */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -499,8 +499,8 @@ void EditorData::remove_scene(int p_idx){
 
 bool EditorData::_find_updated_instances(Node* p_root,Node *p_node,Set<String> &checked_paths) {
 
-	if (p_root!=p_node && p_node->get_owner()!=p_root && !p_root->is_editable_instance(p_node->get_owner()))
-		return false;
+//	if (p_root!=p_node && p_node->get_owner()!=p_root && !p_root->is_editable_instance(p_node->get_owner()))
+//		return false;
 
 	Ref<SceneState> ss;
 
@@ -634,6 +634,16 @@ String EditorData::get_scene_type(int p_idx) const {
 		return "";
 	return edited_scene[p_idx].root->get_type();
 
+}
+void EditorData::move_edited_scene_to_index(int p_idx) {
+
+	ERR_FAIL_INDEX(current_edited_scene,edited_scene.size());
+	ERR_FAIL_INDEX(p_idx,edited_scene.size());
+
+	EditedScene es=edited_scene[current_edited_scene];
+	edited_scene.remove(current_edited_scene);
+	edited_scene.insert(p_idx,es);
+	current_edited_scene=p_idx;
 }
 
 Ref<Script> EditorData::get_scene_root_script(int p_idx) const {

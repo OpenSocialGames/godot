@@ -5,7 +5,7 @@
 /*                           GODOT ENGINE                                */
 /*                    http://www.godotengine.org                         */
 /*************************************************************************/
-/* Copyright (c) 2007-2015 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2007-2016 Juan Linietsky, Ariel Manzur.                 */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -212,8 +212,6 @@ class ScriptEditor : public VBoxContainer {
 	Tree *disk_changed_list;
 	ConfirmationDialog *disk_changed;
 
-	VSplitContainer *v_split;
-
 	bool restoring_layout;
 
 	String _get_debug_tooltip(const String&p_text,Node *_ste);
@@ -297,7 +295,7 @@ public:
 
 	void swap_lines(TextEdit *tx, int line1, int line2);
 
-	void save_external_data();
+	void save_all_scripts();
 
 	void set_window_layout(Ref<ConfigFile> p_layout);
 	void get_window_layout(Ref<ConfigFile> p_layout);

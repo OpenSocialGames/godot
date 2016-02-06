@@ -5,7 +5,7 @@
 /*                           GODOT ENGINE                                */
 /*                    http://www.godotengine.org                         */
 /*************************************************************************/
-/* Copyright (c) 2007-2015 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2007-2016 Juan Linietsky, Ariel Manzur.                 */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -35,6 +35,7 @@
 #include "scene/gui/separator.h"
 #include "editor_node.h"
 #include "tools/editor/plugins/animation_player_editor_plugin.h"
+#include "scene/main/viewport.h"
 /* Missing to fix:
 
   *Set
@@ -256,6 +257,28 @@ public:
 
 	//PopupDialog *ke_dialog;
 
+	void _fix_node_path(Variant &value) {
+
+
+		NodePath np=value;
+
+		if (np==NodePath())
+			return;
+
+		Node* root = EditorNode::get_singleton()->get_tree()->get_root();
+
+		Node* np_node = root->get_node(np);
+		ERR_FAIL_COND(!np_node);
+
+		Node* edited_node = root->get_node(base);
+		ERR_FAIL_COND(!edited_node);
+
+
+
+		value = edited_node->get_path_to(np_node);
+	}
+
+
 	void _update_obj(const Ref<Animation> &p_anim) {
 		if (setting)
 			return;
@@ -356,10 +379,18 @@ public:
 			case Animation::TYPE_VALUE: {
 
 				if (name=="value") {
+
+					Variant value = p_value;
+
+					if (value.get_type()==Variant::NODE_PATH) {
+
+						_fix_node_path(value);
+					}
+
 					setting=true;
 					undo_redo->create_action("Anim Change Value",true);
 					Variant prev =  animation->track_get_key_value(track,key);
-					undo_redo->add_do_method(animation.ptr(),"track_set_key_value",track,key,p_value);
+					undo_redo->add_do_method(animation.ptr(),"track_set_key_value",track,key,value);
 					undo_redo->add_undo_method(animation.ptr(),"track_set_key_value",track,key,prev);
 					undo_redo->add_do_method(this,"_update_obj",animation);
 					undo_redo->add_undo_method(this,"_update_obj",animation);
@@ -420,7 +451,14 @@ public:
 
 					}
 					if (what=="value") {
-						args[idx]=p_value;
+
+						Variant value=p_value;
+						if (value.get_type()==Variant::NODE_PATH) {
+
+							_fix_node_path(value);
+						}
+
+						args[idx]=value;
 						d_new["args"]=args;
 						mergeable=true;
 					}
@@ -441,7 +479,7 @@ public:
 			} break;
 		}
 
-		return false;
+		
 
 		return false;
 
@@ -616,6 +654,7 @@ public:
 	float key_ofs;
 
 	PropertyInfo hint;
+	NodePath base;
 
 
 	void notify_change() {
@@ -1085,6 +1124,7 @@ void AnimationKeyEditor::_track_editor_draw() {
 		move_up_button->set_disabled(true);
 		move_down_button->set_disabled(true);
 		remove_button->set_disabled(true);
+
 		return;
 	}
 
@@ -1629,8 +1669,9 @@ void AnimationKeyEditor::_select_at_anim(const Ref<Animation>& p_anim,int p_trac
 }
 
 
-PropertyInfo AnimationKeyEditor::_find_hint_for_track(int p_idx) {
+PropertyInfo AnimationKeyEditor::_find_hint_for_track(int p_idx,NodePath& r_base_path) {
 
+	r_base_path=NodePath();
 	ERR_FAIL_COND_V(!animation.is_valid(),PropertyInfo());
 	ERR_FAIL_INDEX_V(p_idx,animation->get_track_count(),PropertyInfo());
 
@@ -1639,15 +1680,21 @@ PropertyInfo AnimationKeyEditor::_find_hint_for_track(int p_idx) {
 
 	NodePath path = animation->track_get_path(p_idx);
 
-	String property = path.get_property();
-	if (property=="")
-		return PropertyInfo();
 
 	if (!root->has_node_and_resource(path))
 		return PropertyInfo();
 
 	RES res;
 	Node *node = root->get_node_and_resource(path,res);
+
+
+	if (node) {
+		r_base_path=node->get_path();
+	}
+
+	String property = path.get_property();
+	if (property=="")
+		return PropertyInfo();
 
 	List<PropertyInfo> pinfo;
 	if (res.is_valid())
@@ -1702,7 +1749,7 @@ bool AnimationKeyEditor::_edit_if_single_selection() {
 
 		if (selection.size()==0) {
 			curve_edit->set_mode(AnimationCurveEdit::MODE_DISABLED);
-			print_line("disable");
+			//print_line("disable");
 		} else {
 
 			curve_edit->set_mode(AnimationCurveEdit::MODE_MULTIPLE);
@@ -1713,13 +1760,13 @@ bool AnimationKeyEditor::_edit_if_single_selection() {
 
 				curve_edit->set_multiple(animation->track_get_key_transition(E->key().track,E->key().key));
 			}
-			print_line("multiple");
+			//print_line("multiple");
 
 		}
 		return false;
 	}
 	curve_edit->set_mode(AnimationCurveEdit::MODE_SINGLE);
-	print_line("regular");
+	//print_line("regular");
 
 	int idx = selection.front()->key().track;
 	int key = selection.front()->key().key;
@@ -1728,7 +1775,7 @@ bool AnimationKeyEditor::_edit_if_single_selection() {
 		key_edit->animation=animation;
 		key_edit->track=idx;
 		key_edit->key_ofs=animation->track_get_key_time(idx,key);
-		key_edit->hint=_find_hint_for_track(idx);
+		key_edit->hint=_find_hint_for_track(idx,key_edit->base);
 		key_edit->notify_change();
 
 		curve_edit->set_transition(animation->track_get_key_transition(idx,key));
@@ -2186,7 +2233,8 @@ void AnimationKeyEditor::_track_editor_input_event(const InputEvent& p_input) {
 								newval=d;
 							} else if (tt==Animation::TYPE_VALUE) {
 
-								PropertyInfo inf = _find_hint_for_track(idx);
+								NodePath np;
+								PropertyInfo inf = _find_hint_for_track(idx,np);
 								if (inf.type!=Variant::NIL) {
 
 									Variant::CallError err;
@@ -2806,8 +2854,14 @@ void AnimationKeyEditor::_notification(int p_what) {
 
 
 	switch(p_what) {
+		case NOTIFICATION_VISIBILITY_CHANGED: {
+
+			EditorNode::get_singleton()->update_keying();
+		} break;
 
 		case NOTIFICATION_ENTER_TREE: {
+
+				key_editor->edit(key_edit);
 
 				zoomicon->set_texture( get_icon("Zoom","EditorIcons") );
 
@@ -2968,6 +3022,7 @@ void AnimationKeyEditor::_clear_selection() {
 	key_edit->track=0;
 	key_edit->key_ofs=0;
 	key_edit->hint=PropertyInfo();
+	key_edit->base=NodePath();
 	key_edit->notify_change();
 
 }
@@ -2988,6 +3043,8 @@ void AnimationKeyEditor::set_animation(const Ref<Animation>& p_anim) {
 	_update_menu();
 	selected_track=-1;
 	_edit_if_single_selection();
+
+	EditorNode::get_singleton()->update_keying();
 }
 
 void AnimationKeyEditor::set_root(Node *p_root) {
@@ -3013,11 +3070,16 @@ Node *AnimationKeyEditor::get_root() const {
 
 
 
-void AnimationKeyEditor::set_keying(bool p_enabled) {
+void AnimationKeyEditor::update_keying() {
 
-	keying=p_enabled;
+	bool keying_enabled=is_visible() && animation.is_valid();
+
+	if (keying_enabled==keying)
+		return;
+
+	keying=keying_enabled;
 	_update_menu();
-	emit_signal("keying_changed",p_enabled);
+	emit_signal("keying_changed");
 
 }
 
@@ -3255,9 +3317,10 @@ int AnimationKeyEditor::_confirm_insert(InsertData p_id,int p_last_track) {
 
 			{
 				//shitty hack
+				NodePath np;
 				animation->add_track(p_id.type);
 				animation->track_set_path(animation->get_track_count()-1,p_id.path);
-				PropertyInfo h = _find_hint_for_track(animation->get_track_count()-1);
+				PropertyInfo h = _find_hint_for_track(animation->get_track_count()-1,np);
 				animation->remove_track(animation->get_track_count()-1); //hack
 
 
@@ -3351,6 +3414,7 @@ Ref<Animation> AnimationKeyEditor::get_current_animation() const {
 }
 
 void AnimationKeyEditor::_animation_len_changed(float p_len) {
+
 
 	if (updating)
 		return;
@@ -3479,8 +3543,10 @@ void AnimationKeyEditor::_insert_delay() {
 void AnimationKeyEditor::_step_changed(float p_len) {
 
 	updating=true;
-	if (!animation.is_null())
+	if (!animation.is_null()) {
 		animation->set_step(p_len);
+		emit_signal("animation_step_changed",animation->get_step());
+	}
 	updating=false;
 }
 
@@ -3628,6 +3694,9 @@ void AnimationKeyEditor::_add_call_track(const NodePath& p_base) {
 
 	NodePath path = root->get_path_to(from);
 
+	//print_line("root: "+String(root->get_path()));
+	//print_line("path: "+String(path));
+
 	undo_redo->create_action("Anim Add Call Track");
 	undo_redo->add_do_method(animation.ptr(),"add_track",Animation::TYPE_METHOD);
 	undo_redo->add_do_method(animation.ptr(),"track_set_path",animation->get_track_count(),path);
@@ -3691,21 +3760,33 @@ void AnimationKeyEditor::_bind_methods() {
 	ADD_SIGNAL( MethodInfo("keying_changed" ) );
 	ADD_SIGNAL( MethodInfo("timeline_changed", PropertyInfo(Variant::REAL,"pos") ) );
 	ADD_SIGNAL( MethodInfo("animation_len_changed", PropertyInfo(Variant::REAL,"len") ) );
+	ADD_SIGNAL( MethodInfo("animation_step_changed", PropertyInfo(Variant::REAL,"step") ) );
 	ADD_SIGNAL( MethodInfo("key_edited", PropertyInfo(Variant::INT,"track"), PropertyInfo(Variant::INT,"key") ) );
 
 }
 
 
-AnimationKeyEditor::AnimationKeyEditor(UndoRedo *p_undo_redo, EditorHistory *p_history,EditorSelection *p_selection) {
+AnimationKeyEditor::AnimationKeyEditor() {
 
 	alc="animation_len_changed";
-	editor_selection=p_selection;
+	editor_selection=EditorNode::get_singleton()->get_editor_selection();
 
 	selected_track=-1;
 	updating=false;
 	te_drawing=false;
-	undo_redo=p_undo_redo;
-	history=p_history;
+	undo_redo=EditorNode::get_singleton()->get_undo_redo();
+	history=EditorNode::get_singleton()->get_editor_history();
+
+	ec = memnew (Control);
+	ec->set_custom_minimum_size(Size2(0,150));
+	add_child(ec);
+	ec->set_v_size_flags(SIZE_EXPAND_FILL);
+
+	h_scroll = memnew( HScrollBar );
+	h_scroll->connect("value_changed",this,"_scroll_changed");
+	add_child(h_scroll);
+	h_scroll->set_val(0);
+
 
 	HBoxContainer *hb = memnew( HBoxContainer );
 	add_child(hb);
@@ -3863,10 +3944,6 @@ AnimationKeyEditor::AnimationKeyEditor(UndoRedo *p_undo_redo, EditorHistory *p_h
 
 //	menu->get_popup()->connect("item_pressed",this,"_menu_callback");
 
-	ec = memnew (Control);
-	ec->set_custom_minimum_size(Size2(0,150));
-	add_child(ec);
-	ec->set_v_size_flags(SIZE_EXPAND_FILL);
 
 	hb = memnew( HBoxContainer);
 	hb->set_area_as_parent_rect();
@@ -3906,7 +3983,7 @@ AnimationKeyEditor::AnimationKeyEditor(UndoRedo *p_undo_redo, EditorHistory *p_h
 	key_edit = memnew( AnimationKeyEdit );
 	key_edit->undo_redo=undo_redo;
 	//key_edit->ke_dialog=key_edit_dialog;
-	key_editor->edit(key_edit);
+
 	type_menu = memnew( PopupMenu );
 	add_child(type_menu);
 	for(int i=0;i<Variant::VARIANT_MAX;i++)
@@ -3942,12 +4019,6 @@ AnimationKeyEditor::AnimationKeyEditor(UndoRedo *p_undo_redo, EditorHistory *p_h
 	curve_vb->add_child(curve_edit);
 	curve_edit->set_v_size_flags(SIZE_EXPAND_FILL);
 	key_editor_tab->add_child(curve_vb);
-
-	h_scroll = memnew( HScrollBar );
-	h_scroll->connect("value_changed",this,"_scroll_changed");
-	add_child(h_scroll);
-	h_scroll->set_val(0);
-
 
 	track_name = memnew( LineEdit );
 	track_name->set_as_toplevel(true);
@@ -4025,6 +4096,7 @@ AnimationKeyEditor::AnimationKeyEditor(UndoRedo *p_undo_redo, EditorHistory *p_h
 
 	cleanup_dialog->connect("confirmed",this,"_menu_track",varray(TRACK_MENU_CLEAN_UP_CONFIRM));
 
+	add_constant_override("separation",get_constant("separation","VBoxContainer"));
 
 
 }

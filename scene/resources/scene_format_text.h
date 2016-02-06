@@ -60,7 +60,6 @@ class ResourceInteractiveLoaderText : public ResourceInteractiveLoader {
 friend class ResourceFormatLoaderText;
 
 	List<RES> resource_cache;
-	Error parse_property(Variant& r_v, String &r_name);
 	Error error;
 
 	RES resource;
@@ -73,7 +72,7 @@ public:
 	virtual int get_stage() const;
 	virtual int get_stage_count() const;
 
-	void open(FileAccess *p_f);
+	void open(FileAccess *p_f, bool p_skip_first_tag=false);
 	String recognize(FileAccess *p_f);
 	void get_dependencies(FileAccess *p_f, List<String> *p_dependencies, bool p_add_types);
 	Error rename_dependencies(FileAccess *p_f, const String &p_path,const Map<String,String>& p_map);
@@ -117,7 +116,10 @@ class ResourceFormatSaverTextInstance  {
 	Map<RES,int> internal_resources;
 
 	void _find_resources(const Variant& p_variant,bool p_main=false);
-	void write_property(const String& p_name,const Variant& p_property,bool *r_ok=NULL);
+
+	static String _write_resources(void *ud,const RES& p_resource);
+	String _write_resource(const RES& res);
+
 
 public:
 

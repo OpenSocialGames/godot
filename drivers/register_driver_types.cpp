@@ -5,7 +5,7 @@
 /*                GODOT ENGINE                   */
 /*************************************************/
 /*       Source code within this file is:        */
-/*  (c) 2007-2010 Juan Linietsky, Ariel Manzur   */
+/*  (c) 2007-2016 Juan Linietsky, Ariel Manzur   */
 /*             All Rights Reserved.              */
 /*************************************************/
 
@@ -14,11 +14,12 @@
 #include "png/image_loader_png.h"
 #include "webp/image_loader_webp.h"
 #include "png/resource_saver_png.h"
-#include "jpg/image_loader_jpg.h"
+#include "jpegd/image_loader_jpegd.h"
 #include "dds/texture_loader_dds.h"
 #include "pvr/texture_loader_pvr.h"
 #include "etc1/image_etc.h"
 #include "chibi/event_stream_chibi.h"
+#include "pnm/bitmap_loader_pnm.h"
 
 
 #ifdef TOOLS_ENABLED
@@ -30,7 +31,6 @@
 #endif
 
 #ifdef TOOLS_ENABLED
-#include "pe_bliss/pe_bliss_godot.h"
 #include "platform/windows/export/export.h"
 #endif
 
@@ -112,6 +112,9 @@ static ResourceFormatLoaderAudioStreamMPC * mpc_stream_loader=NULL;
 #include "openssl/register_openssl.h"
 #endif
 
+
+static ResourceFormatPBM * pbm_loader=NULL;
+
 void register_core_driver_types() {
 
 #ifdef PNG_ENABLED
@@ -138,6 +141,9 @@ void register_core_driver_types() {
 	ImageLoader::add_image_format_loader( image_loader_jpg );
 #endif
 
+	pbm_loader = memnew( ResourceFormatPBM );
+	ResourceLoader::add_resource_format_loader(pbm_loader);
+
 	ObjectTypeDB::register_type<RegEx>();
 }
 
@@ -162,6 +168,7 @@ void unregister_core_driver_types() {
 		memdelete( image_loader_jpg );
 #endif
 
+	memdelete( pbm_loader );
 }
 
 

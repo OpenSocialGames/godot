@@ -5,7 +5,7 @@
 /*                           GODOT ENGINE                                */
 /*                    http://www.godotengine.org                         */
 /*************************************************************************/
-/* Copyright (c) 2007-2015 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2007-2016 Juan Linietsky, Ariel Manzur.                 */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -46,6 +46,7 @@ class OS {
 	String _custom_level;
 	List<String> _cmdline;
 	int ips;
+	bool _keep_screen_on;
 	bool low_processor_usage_mode;
 	bool _verbose_stdout;
 	String _local_clipboard;
@@ -75,7 +76,7 @@ public:
 		bool fullscreen;
 		bool resizable;
 		float get_aspect() const { return (float)width/(float)height; }
-		VideoMode(int p_width=1280,int p_height=720,bool p_fullscreen=false, bool p_resizable = true) {width=p_width; height=p_height; fullscreen=p_fullscreen; resizable = p_resizable; }
+		VideoMode(int p_width=1024,int p_height=600,bool p_fullscreen=false, bool p_resizable = true) {width=p_width; height=p_height; fullscreen=p_fullscreen; resizable = p_resizable; }
 	};
 protected:
 friend class Main;
@@ -172,6 +173,8 @@ public:
 	virtual bool is_window_maximized() const { return true; }
 
 
+
+
 	virtual void set_iterations_per_second(int p_ips);
 	virtual int get_iterations_per_second() const;
 
@@ -180,7 +183,8 @@ public:
 
 	virtual float get_frames_per_second() const { return _fps; };
 
-
+	virtual void set_keep_screen_on(bool p_enabled);
+	virtual bool is_keep_screen_on() const;
 	virtual void set_low_processor_usage_mode(bool p_enabled);
 	virtual bool is_in_low_processor_usage_mode() const;
 
@@ -256,7 +260,7 @@ public:
 	virtual Time get_time(bool local=false) const=0;
 	virtual TimeZoneInfo get_time_zone_info() const=0;
 	virtual uint64_t get_unix_time() const;
-	virtual uint64_t get_system_time_msec() const;
+	virtual uint64_t get_system_time_secs() const;
 
 	virtual void delay_usec(uint32_t p_usec) const=0; 
 	virtual uint64_t get_ticks_usec() const=0;
@@ -396,6 +400,16 @@ public:
 	float get_time_scale() const;
 
 	_FORCE_INLINE_ bool get_use_pixel_snap() const { return _pixel_snap; }
+
+	virtual bool is_joy_known(int p_device);
+	virtual String get_joy_guid(int p_device)const;
+
+	enum EngineContext {
+		CONTEXT_EDITOR,
+		CONTEXT_PROJECTMAN,
+	};
+
+	virtual void set_context(int p_context);
 
 	OS();	
 	virtual ~OS();

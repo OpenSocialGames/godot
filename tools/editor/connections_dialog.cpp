@@ -5,7 +5,7 @@
 /*                           GODOT ENGINE                                */
 /*                    http://www.godotengine.org                         */
 /*************************************************************************/
-/* Copyright (c) 2007-2015 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2007-2016 Juan Linietsky, Ariel Manzur.                 */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -96,7 +96,11 @@ void ConnectDialog::_notification(int p_what) {
 		
 		RID ci = get_canvas_item();
 		get_stylebox("panel","PopupMenu")->draw(ci,Rect2(Point2(),get_size()));		
-	}	
+	}
+
+	if (p_what==NOTIFICATION_ENTER_TREE) {
+		bind_editor->edit(cdbinds);
+	}
 }
 
 void ConnectDialog::_tree_node_selected() {
@@ -456,7 +460,6 @@ ConnectDialog::ConnectDialog() {
 	set_as_toplevel(true);
 
 	cdbinds = memnew( ConnectDialogBinds );
-	bind_editor->edit(cdbinds);
 
 	error = memnew( ConfirmationDialog );
 	add_child(error);

@@ -12,11 +12,13 @@ SConscript('windows/SCsub');
 SConscript('gles2/SCsub');
 SConscript('gl_context/SCsub');
 SConscript('openssl/SCsub');
+SConscript('pnm/SCsub');
 
 if (env["png"]=="yes"):
 	SConscript("png/SCsub");
 if (env["jpg"]=="yes"):
-	SConscript("jpg/SCsub");
+	#SConscript("jpg/SCsub");
+	SConscript("jpegd/SCsub");
 if (env["webp"]=="yes"):
 	SConscript("webp/SCsub");
 SConscript("dds/SCsub");
@@ -61,7 +63,7 @@ import string
 if env['vsproj']=="yes":
 	env.AddToVSProject(env.drivers_sources)
 
-if (False): #split drivers, this used to be needed for windows until separate builders for windows were created
+if (env.split_drivers): #split drivers, this used to be needed for windows until separate builders for windows were created
 
 	for f in env.drivers_sources:
 		fname = ""

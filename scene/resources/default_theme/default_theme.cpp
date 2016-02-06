@@ -5,7 +5,7 @@
 /*                GODOT ENGINE                   */
 /*************************************************/
 /*       Source code within this file is:        */
-/*  (c) 2007-2010 Juan Linietsky, Ariel Manzur   */
+/*  (c) 2007-2016 Juan Linietsky, Ariel Manzur   */
 /*             All Rights Reserved.              */
 /*************************************************/
 
@@ -78,6 +78,13 @@ static Ref<Texture> make_icon(T p_src) {
 	texture->create_from_image( Image(p_src),ImageTexture::FLAG_FILTER );
 
 	return texture;
+}
+
+static Ref<Shader> make_shader(const char*vertex_code,const char*fragment_code,const char*lighting_code) {
+	Ref<Shader> shader = (memnew( Shader(Shader::MODE_CANVAS_ITEM) ));
+	shader->set_code(vertex_code, fragment_code, lighting_code);
+
+	return shader;
 }
 
 static Ref<Font> make_font(int p_height,int p_ascent, int p_valign, int p_charcount, const int *p_chars,const Ref<Texture> &p_texture) {
@@ -257,8 +264,8 @@ void make_default_theme() {
 	// ToolButton
 
 	Ref<StyleBox> tb_empty = memnew( StyleBoxEmpty );
-	tb_empty->set_default_margin(MARGIN_LEFT,8);
-	tb_empty->set_default_margin(MARGIN_RIGHT,8);
+	tb_empty->set_default_margin(MARGIN_LEFT,6);
+	tb_empty->set_default_margin(MARGIN_RIGHT,6);
 	tb_empty->set_default_margin(MARGIN_TOP,4);
 	tb_empty->set_default_margin(MARGIN_BOTTOM,4);
 
@@ -543,7 +550,11 @@ void make_default_theme() {
 	t->set_constant("close_v_ofs","WindowDialog", 20 );
 	t->set_constant("titlebar_height","WindowDialog", 18 );
 	t->set_constant("title_height","WindowDialog", 20 );
-
+	
+	
+	// File Dialog
+	
+	t->set_icon("reload","FileDialog",make_icon( icon_reload_png ));
 
 
 	// Popup
@@ -713,6 +724,7 @@ void make_default_theme() {
 	t->set_icon("increment_hilite","Tabs",make_icon( scroll_button_right_hl_png));
 	t->set_icon("decrement","Tabs",make_icon( scroll_button_left_png));
 	t->set_icon("decrement_hilite","Tabs",make_icon( scroll_button_left_hl_png));
+	t->set_icon("close","Tabs",make_icon( tab_close_png));
 
 	t->set_font("font","Tabs", default_font );
 
@@ -762,7 +774,11 @@ void make_default_theme() {
 	t->set_constant("label_width","ColorPicker", 20);
 	t->set_constant("hseparator","ColorPicker", 4);
 
-
+	t->set_icon("screen_picker","ColorPicker", make_icon( icon_color_pick_png ) );
+	t->set_icon("add_preset","ColorPicker", make_icon( icon_add_png ) );
+	
+	t->set_shader("uv_editor", "ColorPicker", make_shader("", uv_editor_shader_code, ""));
+	t->set_shader("w_editor", "ColorPicker", make_shader("", w_editor_shader_code, ""));
 
 	// TooltipPanel
 
@@ -797,6 +813,8 @@ void make_default_theme() {
 	t->set_color("selection_color","RichTextLabel", Color(0.1,0.1,1,0.8) );
 
 	t->set_constant("line_separation","RichTextLabel", 1 );
+	t->set_constant("table_hseparation","RichTextLabel", 3 );
+	t->set_constant("table_vseparation","RichTextLabel", 3 );
 
 
 

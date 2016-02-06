@@ -5,7 +5,7 @@
 /*                           GODOT ENGINE                                */
 /*                    http://www.godotengine.org                         */
 /*************************************************************************/
-/* Copyright (c) 2007-2015 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2007-2016 Juan Linietsky, Ariel Manzur.                 */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -72,8 +72,7 @@ void SpinBox::_range_click_timeout() {
 
 	if (!drag.enabled && Input::get_singleton()->is_mouse_button_pressed(BUTTON_LEFT)) {
 
-		int pos_y = Input::get_singleton()->get_mouse_pos().y-get_global_pos().y;
-		bool up = pos_y < (get_size().height/2);
+		bool up = get_local_mouse_pos().y < (get_size().height/2);
 		set_val( get_val() + (up?get_step():-get_step()));
 
 		if (range_click_timer->is_one_shot()) {

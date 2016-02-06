@@ -5,7 +5,7 @@
 /*                           GODOT ENGINE                                */
 /*                    http://www.godotengine.org                         */
 /*************************************************************************/
-/* Copyright (c) 2007-2015 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2007-2016 Juan Linietsky, Ariel Manzur.                 */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -831,21 +831,26 @@ bool ThemeEditorPlugin::handles(Object *p_node) const{
 void ThemeEditorPlugin::make_visible(bool p_visible){
 
 	if (p_visible) {
-		theme_editor->show();
 		theme_editor->set_process(true);
+		button->show();
 	} else {
-		theme_editor->hide();
 		theme_editor->set_process(false);
+		if (theme_editor->is_visible())
+			EditorNode::get_singleton()->hide_bottom_panel();
+		button->hide();
 	}
 }
 
 ThemeEditorPlugin::ThemeEditorPlugin(EditorNode *p_node) {
 
+	editor=p_node;
 	theme_editor = memnew( ThemeEditor );
+	theme_editor->set_custom_minimum_size(Size2(0,500));
 
-	p_node->get_viewport()->add_child(theme_editor);
-	theme_editor->set_area_as_parent_rect();
-	theme_editor->hide();
+//	p_node->get_viewport()->add_child(theme_editor);
+	button=EditorNode::get_singleton()->add_bottom_panel_item("Theme",theme_editor);
+	button->hide();
+
 
 }
 

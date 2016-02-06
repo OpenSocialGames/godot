@@ -5,7 +5,7 @@
 /*                           GODOT ENGINE                                */
 /*                    http://www.godotengine.org                         */
 /*************************************************************************/
-/* Copyright (c) 2007-2015 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2007-2016 Juan Linietsky, Ariel Manzur.                 */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -50,7 +50,7 @@ uint64_t OS::get_unix_time() const {
 
 	return 0;
 };
-uint64_t OS::get_system_time_msec() const {
+uint64_t OS::get_system_time_secs() const {
 	return 0;
 }
 void OS::debug_break() {
@@ -110,6 +110,14 @@ void OS::set_target_fps(int p_fps) {
 
 float OS::get_target_fps() const {
 	return _target_fps;
+}
+
+void OS::set_keep_screen_on(bool p_enabled) {
+	_keep_screen_on=p_enabled;
+}
+
+bool OS::is_keep_screen_on() const {
+	return _keep_screen_on;
 }
 
 void OS::set_low_processor_usage_mode(bool p_enabled) {
@@ -507,12 +515,24 @@ float OS::get_time_scale() const {
 	return _time_scale;
 }
 
+bool OS::is_joy_known(int p_device) {
+	return true;
+}
+
+String OS::get_joy_guid(int p_device) const {
+	return "Default Joystick";
+}
+
+void OS::set_context(int p_context) {
+
+}
 
 OS::OS() {
 	last_error=NULL;
 	frames_drawn=0;
 	singleton=this;
 	ips=60;
+	_keep_screen_on=true; // set default value to true, because this had been true before godot 2.0.
 	low_processor_usage_mode=false;
 	_verbose_stdout=false;
 	_frame_delay=0;

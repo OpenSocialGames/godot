@@ -243,7 +243,7 @@ def configure(env):
 		env.Append(CCFLAGS=['/DGLES2_ENABLED'])
 
 		env.Append(CCFLAGS=['/DGLEW_ENABLED'])
-		LIBS=['winmm','opengl32','dsound','kernel32','ole32','user32','gdi32', 'IPHLPAPI','Shlwapi', 'wsock32', 'shell32','advapi32']
+		LIBS=['winmm','opengl32','dsound','kernel32','ole32','oleaut32','user32','gdi32', 'IPHLPAPI','Shlwapi', 'wsock32', 'shell32','advapi32','dinput8','dxguid']
 		env.Append(LINKFLAGS=[p+env["LIBSUFFIX"] for p in LIBS])
 		
 		env.Append(LIBPATH=[os.getenv("WindowsSdkDir")+"/Lib"])
@@ -267,41 +267,7 @@ def configure(env):
 
 		# Workaround for MinGW. See:
 		# http://www.scons.org/wiki/LongCmdLinesOnWin32
-		if (os.name=="nt"):
-			import subprocess
-			
-			def mySubProcess(cmdline,env):
-				#print "SPAWNED : " + cmdline
-				startupinfo = subprocess.STARTUPINFO()
-				startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
-				proc = subprocess.Popen(cmdline, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
-					stderr=subprocess.PIPE, startupinfo=startupinfo, shell = False, env = env)
-				data, err = proc.communicate()
-				rv = proc.wait()
-				if rv:
-					print "====="
-					print err
-					print "====="
-				return rv
-				
-			def mySpawn(sh, escape, cmd, args, env):
-								
-				newargs = ' '.join(args[1:])
-				cmdline = cmd + " " + newargs
-				
-				rv=0
-				if len(cmdline) > 32000 and cmd.endswith("ar") :
-					cmdline = cmd + " " + args[1] + " " + args[2] + " "
-					for i in range(3,len(args)) :
-						rv = mySubProcess( cmdline + args[i], env )
-						if rv :
-							break	
-				else:				
-					rv = mySubProcess( cmdline, env )
-					
-				return rv
-				
-			env['SPAWN'] = mySpawn
+		env.use_windows_spawn_fix()
 
 		#build using mingw
 		if (os.name=="nt"):
@@ -339,7 +305,13 @@ def configure(env):
 
 		if (env["target"]=="release"):
 			
-			env.Append(CCFLAGS=['-O3','-ffast-math','-fomit-frame-pointer','-msse2'])
+			env.Append(CCFLAGS=['-msse2'])
+
+			if (env["bits"]=="64"):
+				env.Append(CCFLAGS=['-O3'])
+			else:
+				env.Append(CCFLAGS=['-O2'])
+
 			env.Append(LINKFLAGS=['-Wl,--subsystem,windows'])
 
 		elif (env["target"]=="release_debug"):
@@ -369,7 +341,7 @@ def configure(env):
 		env.Append(CCFLAGS=['-DWINDOWS_ENABLED','-mwindows'])
 		env.Append(CPPFLAGS=['-DRTAUDIO_ENABLED'])
 		env.Append(CCFLAGS=['-DGLES2_ENABLED','-DGLEW_ENABLED'])
-		env.Append(LIBS=['mingw32','opengl32', 'dsound', 'ole32', 'd3d9','winmm','gdi32','iphlpapi','shlwapi','wsock32','kernel32'])
+		env.Append(LIBS=['mingw32','opengl32', 'dsound', 'ole32', 'd3d9','winmm','gdi32','iphlpapi','shlwapi','wsock32','kernel32', 'oleaut32', 'dinput8', 'dxguid'])
 
 		# if (env["bits"]=="32"):
 			# env.Append(LIBS=['gcc_s'])
@@ -382,7 +354,7 @@ def configure(env):
 
 		#'d3dx9d'
 		env.Append(CPPFLAGS=['-DMINGW_ENABLED'])
-		env.Append(LINKFLAGS=['-g'])
+		#env.Append(LINKFLAGS=['-g'])
 
 		# resrc
 		env['is_mingw']=True

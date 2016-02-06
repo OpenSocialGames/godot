@@ -106,10 +106,6 @@ def configure(env):
 		#env['SPAWN'] = methods.win32_spawn
 		env['SHLIBSUFFIX'] = '.so'
 
-	#env.android_source_modules.append("../libs/apk_expansion")	
-	env.android_source_modules.append("../libs/google_play_services")	
-	env.android_source_modules.append("../libs/downloader_library")	
-	env.android_source_modules.append("../libs/play_licensing")	
 
 	neon_text=""
 	if env["android_arch"]=="armv7" and env['android_neon']=='yes':
@@ -251,3 +247,5 @@ def configure(env):
 	env.Append( BUILDERS = { 'GLSL120' : env.Builder(action = methods.build_legacygl_headers, suffix = 'glsl.h',src_suffix = '.glsl') } )
 	env.Append( BUILDERS = { 'GLSL' : env.Builder(action = methods.build_glsl_headers, suffix = 'glsl.h',src_suffix = '.glsl') } )
 	env.Append( BUILDERS = { 'GLSL120GLES' : env.Builder(action = methods.build_gles2_headers, suffix = 'glsl.h',src_suffix = '.glsl') } )
+
+	env.use_windows_spawn_fix()

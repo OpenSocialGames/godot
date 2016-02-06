@@ -5,7 +5,7 @@
 /*                           GODOT ENGINE                                */
 /*                    http://www.godotengine.org                         */
 /*************************************************************************/
-/* Copyright (c) 2007-2015 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2007-2016 Juan Linietsky, Ariel Manzur.                 */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -29,6 +29,10 @@
 #include "thread_posix.h"
 
 #if defined(UNIX_ENABLED) || defined(PTHREAD_ENABLED)
+
+#ifdef PTHREAD_BSD_SET_NAME
+#include <pthread_np.h>
+#endif
 
 #include "os/memory.h"
 
@@ -77,29 +81,34 @@ void ThreadPosix::wait_to_finish_func_posix(Thread* p_thread) {
 	tp->pthread=0;		
 }
 
-Error ThreadPosix::set_name(const String& p_name) {
+Error ThreadPosix::set_name_func_posix(const String& p_name) {
 
-	ERR_FAIL_COND_V(pthread == 0, ERR_UNCONFIGURED);
+	pthread_t running_thread = pthread_self();
+
+	#ifdef PTHREAD_NO_RENAME
+	return ERR_UNAVAILABLE;
+
+	#else
 
 	#ifdef PTHREAD_RENAME_SELF
 
 	// check if thread is the same as caller
-	int caller = Thread::get_caller_ID();
-	int self = get_ID();
-	if (caller != self) {
-		ERR_EXPLAIN("On this platform, thread can only be renamed with calls from the threads to be renamed.");
-		ERR_FAIL_V(ERR_UNAVAILABLE);
-		return ERR_UNAVAILABLE;
-	};
 	int err = pthread_setname_np(p_name.utf8().get_data());
 	
 	#else
 
-	int err = pthread_setname_np(pthread, p_name.utf8().get_data());
+	#ifdef PTHREAD_BSD_SET_NAME
+	pthread_set_name_np(running_thread, p_name.utf8().get_data());
+	int err = 0; // Open/FreeBSD ignore errors in this function
+	#else
+	int err = pthread_setname_np(running_thread, p_name.utf8().get_data());
+	#endif // PTHREAD_BSD_SET_NAME
 
-	#endif
+	#endif // PTHREAD_RENAME_SELF
 
 	return err == 0 ? OK : ERR_INVALID_PARAMETER;
+
+	#endif // PTHREAD_NO_RENAME
 };
 
 void ThreadPosix::make_default() {
@@ -107,7 +116,7 @@ void ThreadPosix::make_default() {
 	create_func=create_func_posix;
 	get_thread_ID_func=get_thread_ID_func_posix;
 	wait_to_finish_func=wait_to_finish_func_posix;
-	
+	set_name_func = set_name_func_posix;
 }
 
 ThreadPosix::ThreadPosix() {

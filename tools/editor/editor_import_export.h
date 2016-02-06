@@ -5,7 +5,7 @@
 /*                           GODOT ENGINE                                */
 /*                    http://www.godotengine.org                         */
 /*************************************************************************/
-/* Copyright (c) 2007-2015 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2007-2016 Juan Linietsky, Ariel Manzur.                 */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -136,8 +136,9 @@ public:
 	enum ExportFlags {
 		EXPORT_DUMB_CLIENT=1,
 		EXPORT_REMOTE_DEBUG=2,
-		EXPORT_VIEW_COLLISONS=4,
-		EXPORT_VIEW_NAVIGATION=8
+		EXPORT_REMOTE_DEBUG_LOCALHOST=4,
+		EXPORT_VIEW_COLLISONS=8,
+		EXPORT_VIEW_NAVIGATION=16,
 	};
 
 
@@ -175,8 +176,7 @@ public:
 	enum ExportMode {
 		EXPORT_EXE,
 		EXPORT_PACK,
-		EXPORT_COPY,
-		EXPORT_BUNDLES
+		EXPORT_ZIP
 	};
 
 
@@ -198,6 +198,7 @@ private:
 	Ref<Texture> logo;
 
 	ExportMode export_mode;
+	bool bundle;
 protected:
 
 	bool _set(const StringName& p_name, const Variant& p_value);

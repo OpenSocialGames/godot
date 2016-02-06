@@ -5,7 +5,7 @@
 /*                           GODOT ENGINE                                */
 /*                    http://www.godotengine.org                         */
 /*************************************************************************/
-/* Copyright (c) 2007-2015 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2007-2016 Juan Linietsky, Ariel Manzur.                 */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -455,6 +455,9 @@ bool EditorExportPlatformPC::_set(const StringName& p_name, const Variant& p_val
 	} else if (n=="resources/pack_mode") {
 
 		export_mode=ExportMode(int(p_value));
+	} else if (n=="resources/bundle_dependencies_(for_optical_disc)") {
+
+		bundle=p_value;
 	} else if (n=="binary/64_bits") {
 
 		use64=p_value;
@@ -478,6 +481,9 @@ bool EditorExportPlatformPC::_get(const StringName& p_name,Variant &r_ret) const
 	} else if (n=="resources/pack_mode") {
 
 		r_ret=export_mode;
+	} else if (n=="resources/bundle_dependencies_(for_optical_disc)") {
+
+		r_ret=bundle;
 	} else if (n=="binary/64_bits") {
 
 		r_ret=use64;
@@ -492,7 +498,8 @@ void EditorExportPlatformPC::_get_property_list( List<PropertyInfo> *p_list) con
 
 	p_list->push_back( PropertyInfo( Variant::STRING, "custom_binary/debug", PROPERTY_HINT_GLOBAL_FILE,binary_extension));
 	p_list->push_back( PropertyInfo( Variant::STRING, "custom_binary/release", PROPERTY_HINT_GLOBAL_FILE,binary_extension));
-	p_list->push_back( PropertyInfo( Variant::INT, "resources/pack_mode", PROPERTY_HINT_ENUM,"Single Exec.,Exec+Pack (.pck),Copy,Bundles (Optical)"));
+	p_list->push_back( PropertyInfo( Variant::INT, "resources/pack_mode", PROPERTY_HINT_ENUM,"Pack into executable,Pack into binary file (.pck),Pack into archive file (.zip)"));
+	p_list->push_back( PropertyInfo( Variant::BOOL, "resources/bundle_dependencies_(for_optical_disc)"));
 	p_list->push_back( PropertyInfo( Variant::BOOL, "binary/64_bits"));
 }
 
@@ -993,6 +1000,9 @@ void EditorExportPlatform::gen_export_flags(Vector<String> &r_flags, int p_flags
 
 	String host = EditorSettings::get_singleton()->get("network/debug_host");
 
+	if (p_flags&EXPORT_REMOTE_DEBUG_LOCALHOST)
+		host="localhost";
+
 	if (p_flags&EXPORT_DUMB_CLIENT) {
 		int port = EditorSettings::get_singleton()->get("file_server/port");
 		String passwd = EditorSettings::get_singleton()->get("file_server/password");
@@ -1007,6 +1017,7 @@ void EditorExportPlatform::gen_export_flags(Vector<String> &r_flags, int p_flags
 	if (p_flags&EXPORT_REMOTE_DEBUG) {
 
 		r_flags.push_back("-rdebug");
+
 		r_flags.push_back(host+":"+String::num(GLOBAL_DEF("debug/debug_port", 6007)));
 
 		List<String> breakpoints;
@@ -1064,7 +1075,7 @@ Error EditorExportPlatform::save_pack_file(void *p_userdata,const String& p_path
 		MD5Final(&ctx);
 		pd->f->store_buffer(ctx.digest,16);
 	}
-	pd->ep->step("Storing File: "+p_path,2+p_file*100/p_total);
+	pd->ep->step("Storing File: "+p_path,2+p_file*100/p_total,false);
 	pd->count++;
 	pd->ftmp->store_buffer(p_data.ptr(),p_data.size());
 	if (pd->alignment > 1) {
@@ -1102,7 +1113,7 @@ Error EditorExportPlatform::save_zip_file(void *p_userdata,const String& p_path,
 	zipWriteInFileInZip(zip,p_data.ptr(),p_data.size());
 	zipCloseFileInZip(zip);
 
-	zd->ep->step("Storing File: "+p_path,2+p_file*100/p_total);
+	zd->ep->step("Storing File: "+p_path,2+p_file*100/p_total,false);
 	zd->count++;
 	return OK;
 
@@ -1128,10 +1139,7 @@ Error EditorExportPlatform::save_zip(const String& p_path, bool p_make_bundles) 
 
 	zipClose(zip,NULL);
 
-	if (err)
-		return err;
-
-
+	return err;
 }
 
 Error EditorExportPlatform::save_pack(FileAccess *dst,bool p_make_bundles, int p_alignment) {
@@ -1277,26 +1285,32 @@ Error EditorExportPlatformPC::export_project(const String& p_path, bool p_debug,
 		}
 	}
 
+	String dstfile = p_path.replace_first("res://","").replace("\\","/");
 	if (export_mode!=EXPORT_EXE) {
 
-		String dstfile=p_path.replace_first("res://","").replace("\\","/");
+		String dstfile_extension=export_mode==EXPORT_ZIP?".zip":".pck";
 		if (dstfile.find("/")!=-1)
-			dstfile=dstfile.get_base_dir()+"/data.pck";
+			dstfile=dstfile.get_base_dir()+"/data"+dstfile_extension;
 		else
-			dstfile="data.pck";
+			dstfile="data"+dstfile_extension;
+		if (export_mode==EXPORT_PACK) {
 
-		memdelete(dst);
-		dst=FileAccess::open(dstfile,FileAccess::WRITE);
-		if (!dst) {
+			memdelete(dst);
 
-			EditorNode::add_io_error("Can't write data pack to:\n "+p_path);
-			return ERR_FILE_CANT_WRITE;
+			dst=FileAccess::open(dstfile,FileAccess::WRITE);
+			if (!dst) {
+
+				EditorNode::add_io_error("Can't write data pack to:\n "+p_path);
+				return ERR_FILE_CANT_WRITE;
+			}
 		}
 	}
 
+
+
 	memdelete(src_exe);
 
-	Error err = save_pack(dst,export_mode==EXPORT_BUNDLES);
+	Error err = export_mode==EXPORT_ZIP?save_zip(dstfile,bundle):save_pack(dst,bundle);
 	memdelete(dst);
 	return err;
 }
@@ -1838,6 +1852,15 @@ void EditorImportExport::load_config() {
 	}
 
 	if (cf->has_section("convert_samples")) {
+
+		if (cf->has_section_key("convert_samples","action")) {
+			String action = cf->get_value("convert_samples","action");
+			if (action=="none") {
+				sample_action=SAMPLE_ACTION_NONE;
+			} else if (action=="compress_ram") {
+				sample_action=SAMPLE_ACTION_COMPRESS_RAM;
+			}
+		}
 
 		if (cf->has_section_key("convert_samples","max_hz"))
 			sample_action_max_hz=cf->get_value("convert_samples","max_hz");

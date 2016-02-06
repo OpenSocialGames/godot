@@ -5,7 +5,7 @@
 /*                           GODOT ENGINE                                */
 /*                    http://www.godotengine.org                         */
 /*************************************************************************/
-/* Copyright (c) 2007-2015 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2007-2016 Juan Linietsky, Ariel Manzur.                 */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -243,7 +243,7 @@ int PacketPeerStream::get_max_packet_size() const {
 
 void PacketPeerStream::set_stream_peer(const Ref<StreamPeer> &p_peer) {
 
-	ERR_FAIL_COND(p_peer.is_null());
+	//ERR_FAIL_COND(p_peer.is_null());
 
 	if (p_peer.ptr() != peer.ptr()) {
 		ring_buffer.advance_read(ring_buffer.data_left()); // reset the ring buffer

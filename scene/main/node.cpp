@@ -5,7 +5,7 @@
 /*                           GODOT ENGINE                                */
 /*                    http://www.godotengine.org                         */
 /*************************************************************************/
-/* Copyright (c) 2007-2015 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2007-2016 Juan Linietsky, Ariel Manzur.                 */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -33,6 +33,7 @@
 #include "scene/resources/packed_scene.h"
 #include "io/resource_loader.h"
 #include "viewport.h"
+#include "instance_placeholder.h"
 
 VARIANT_ENUM_CAST(Node::PauseMode);
 
@@ -802,6 +803,7 @@ void Node::remove_child(Node *p_child) {
 	}
 	
 	ERR_FAIL_COND( idx==-1 );
+	//ERR_FAIL_COND( p_child->data.blocked > 0 );
 
 	
 	//if (data.scene) { does not matter
@@ -856,7 +858,10 @@ Node *Node::_get_child_by_name(const StringName& p_name) const {
 
 Node *Node::_get_node(const NodePath& p_path) const {
 
-	ERR_FAIL_COND_V( !data.inside_tree && p_path.is_absolute(), NULL );
+	if (!data.inside_tree && p_path.is_absolute()) {
+		ERR_EXPLAIN("Can't use get_node() with absolute paths from outside the active scene tree.");
+		ERR_FAIL_V(NULL);
+	}
 	
 	Node *current=NULL;	
 	Node *root=NULL;
@@ -1467,7 +1472,14 @@ Node *Node::duplicate(bool p_use_instancing) const {
 
 	bool instanced=false;
 
-	if (p_use_instancing && get_filename()!=String()) {
+	if (cast_to<InstancePlaceholder>()) {
+
+		const InstancePlaceholder *ip = cast_to<const InstancePlaceholder>();
+		InstancePlaceholder *nip = memnew( InstancePlaceholder );
+		nip->set_instance_path( ip->get_instance_path() );
+		node=nip;
+
+	} else if (p_use_instancing && get_filename()!=String()) {
 
 		Ref<PackedScene> res = ResourceLoader::load(get_filename());
 		ERR_FAIL_COND_V(res.is_null(),NULL);
@@ -1505,6 +1517,15 @@ Node *Node::duplicate(bool p_use_instancing) const {
 	}
 
 	node->set_name(get_name());
+
+	List<GroupInfo> gi;
+	get_groups(&gi);
+	for (List<GroupInfo>::Element *E=gi.front();E;E=E->next()) {
+
+		node->add_to_group(E->get().name, E->get().persistent);
+	}
+
+	_duplicate_signals(this, node);
 
 	for(int i=0;i<get_child_count();i++) {
 
@@ -2001,7 +2022,7 @@ void Node::_bind_methods() {
 	ObjectTypeDB::bind_method(_MD("is_greater_than","node:Node"),&Node::is_greater_than);
 	ObjectTypeDB::bind_method(_MD("get_path"),&Node::get_path);
 	ObjectTypeDB::bind_method(_MD("get_path_to","node:Node"),&Node::get_path_to);
-	ObjectTypeDB::bind_method(_MD("add_to_group","group"),&Node::add_to_group,DEFVAL(false));
+	ObjectTypeDB::bind_method(_MD("add_to_group","group","persistent"),&Node::add_to_group,DEFVAL(false));
 	ObjectTypeDB::bind_method(_MD("remove_from_group","group"),&Node::remove_from_group);
 	ObjectTypeDB::bind_method(_MD("is_in_group","group"),&Node::is_in_group);
 	ObjectTypeDB::bind_method(_MD("move_child","child_node:Node","to_pos"),&Node::move_child);
@@ -2063,6 +2084,8 @@ void Node::_bind_methods() {
 	BIND_CONSTANT( NOTIFICATION_UNPARENTED );
 	BIND_CONSTANT( NOTIFICATION_PAUSED );
 	BIND_CONSTANT( NOTIFICATION_UNPAUSED );
+	BIND_CONSTANT( NOTIFICATION_INSTANCED );
+
 
 
 	BIND_CONSTANT( PAUSE_MODE_INHERIT );

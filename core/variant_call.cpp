@@ -5,7 +5,7 @@
 /*                           GODOT ENGINE                                */
 /*                    http://www.godotengine.org                         */
 /*************************************************************************/
-/* Copyright (c) 2007-2015 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2007-2016 Juan Linietsky, Ariel Manzur.                 */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -272,6 +272,9 @@ static void _call_##m_type##_##m_method(Variant& r_ret,Variant& p_self,const Var
 	VCALL_LOCALMEM0R(String,get_file);
 	VCALL_LOCALMEM0R(String,xml_escape);
 	VCALL_LOCALMEM0R(String,xml_unescape);
+	VCALL_LOCALMEM0R(String,c_escape);
+	VCALL_LOCALMEM0R(String,c_unescape);
+	VCALL_LOCALMEM0R(String,json_escape);
 	VCALL_LOCALMEM0R(String,percent_encode);
 	VCALL_LOCALMEM0R(String,percent_decode);
 	VCALL_LOCALMEM0R(String,is_valid_identifier);
@@ -1286,6 +1289,9 @@ _VariantCall::addfunc(Variant::m_vtype,Variant::m_ret,_SCS(#m_method),VCALL(m_cl
 	ADDFUNC0(STRING,STRING,String,get_file,varray());
 	ADDFUNC0(STRING,STRING,String,xml_escape,varray());
 	ADDFUNC0(STRING,STRING,String,xml_unescape,varray());
+	ADDFUNC0(STRING,STRING,String,c_escape,varray());
+	ADDFUNC0(STRING,STRING,String,c_unescape,varray());
+	ADDFUNC0(STRING,STRING,String,json_escape,varray());
 	ADDFUNC0(STRING,STRING,String,percent_encode,varray());
 	ADDFUNC0(STRING,STRING,String,percent_decode,varray());
 	ADDFUNC0(STRING,BOOL,String,is_valid_identifier,varray());
@@ -1445,7 +1451,7 @@ _VariantCall::addfunc(Variant::m_vtype,Variant::m_ret,_SCS(#m_method),VCALL(m_cl
 
 	ADDFUNC0(RAW_ARRAY,INT,ByteArray,size,varray());
 	ADDFUNC2(RAW_ARRAY,NIL,ByteArray,set,INT,"idx",INT,"byte",varray());
-	ADDFUNC1(RAW_ARRAY,INT,ByteArray,get,INT,"idx",varray());
+	//ADDFUNC1(RAW_ARRAY,INT,ByteArray,get,INT,"idx",varray());
 	ADDFUNC1(RAW_ARRAY,NIL,ByteArray,push_back,INT,"byte",varray());
 	ADDFUNC1(RAW_ARRAY,NIL,ByteArray,resize,INT,"idx",varray());
 
@@ -1455,37 +1461,37 @@ _VariantCall::addfunc(Variant::m_vtype,Variant::m_ret,_SCS(#m_method),VCALL(m_cl
 
 	ADDFUNC0(INT_ARRAY,INT,IntArray,size,varray());
 	ADDFUNC2(INT_ARRAY,NIL,IntArray,set,INT,"idx",INT,"integer",varray());
-	ADDFUNC1(INT_ARRAY,INT,IntArray,get,INT,"idx",varray());
+	//ADDFUNC1(INT_ARRAY,INT,IntArray,get,INT,"idx",varray());
 	ADDFUNC1(INT_ARRAY,NIL,IntArray,push_back,INT,"integer",varray());
 	ADDFUNC1(INT_ARRAY,NIL,IntArray,resize,INT,"idx",varray());
 
 	ADDFUNC0(REAL_ARRAY,INT,RealArray,size,varray());
 	ADDFUNC2(REAL_ARRAY,NIL,RealArray,set,INT,"idx",REAL,"value",varray());
-	ADDFUNC1(REAL_ARRAY,REAL,RealArray,get,INT,"idx",varray());
+	//ADDFUNC1(REAL_ARRAY,REAL,RealArray,get,INT,"idx",varray());
 	ADDFUNC1(REAL_ARRAY,NIL,RealArray,push_back,REAL,"value",varray());
 	ADDFUNC1(REAL_ARRAY,NIL,RealArray,resize,INT,"idx",varray());
 
 	ADDFUNC0(STRING_ARRAY,INT,StringArray,size,varray());
 	ADDFUNC2(STRING_ARRAY,NIL,StringArray,set,INT,"idx",STRING,"string",varray());
-	ADDFUNC1(STRING_ARRAY,STRING,StringArray,get,INT,"idx",varray());
+	//ADDFUNC1(STRING_ARRAY,STRING,StringArray,get,INT,"idx",varray());
 	ADDFUNC1(STRING_ARRAY,NIL,StringArray,push_back,STRING,"string",varray());
 	ADDFUNC1(STRING_ARRAY,NIL,StringArray,resize,INT,"idx",varray());
 
 	ADDFUNC0(VECTOR2_ARRAY,INT,Vector2Array,size,varray());
 	ADDFUNC2(VECTOR2_ARRAY,NIL,Vector2Array,set,INT,"idx",VECTOR2,"vector2",varray());
-	ADDFUNC1(VECTOR2_ARRAY,VECTOR2,Vector2Array,get,INT,"idx",varray());
+	//ADDFUNC1(VECTOR2_ARRAY,VECTOR2,Vector2Array,get,INT,"idx",varray());
 	ADDFUNC1(VECTOR2_ARRAY,NIL,Vector2Array,push_back,VECTOR2,"vector2",varray());
 	ADDFUNC1(VECTOR2_ARRAY,NIL,Vector2Array,resize,INT,"idx",varray());
 
 	ADDFUNC0(VECTOR3_ARRAY,INT,Vector3Array,size,varray());
 	ADDFUNC2(VECTOR3_ARRAY,NIL,Vector3Array,set,INT,"idx",VECTOR3,"vector3",varray());
-	ADDFUNC1(VECTOR3_ARRAY,VECTOR3,Vector3Array,get,INT,"idx",varray());
+	//ADDFUNC1(VECTOR3_ARRAY,VECTOR3,Vector3Array,get,INT,"idx",varray());
 	ADDFUNC1(VECTOR3_ARRAY,NIL,Vector3Array,push_back,VECTOR3,"vector3",varray());
 	ADDFUNC1(VECTOR3_ARRAY,NIL,Vector3Array,resize,INT,"idx",varray());
 
 	ADDFUNC0(COLOR_ARRAY,INT,ColorArray,size,varray());
 	ADDFUNC2(COLOR_ARRAY,NIL,ColorArray,set,INT,"idx",COLOR,"color",varray());
-	ADDFUNC1(COLOR_ARRAY,COLOR,ColorArray,get,INT,"idx",varray());
+	//ADDFUNC1(COLOR_ARRAY,COLOR,ColorArray,get,INT,"idx",varray());
 	ADDFUNC1(COLOR_ARRAY,NIL,ColorArray,push_back,COLOR,"color",varray());
 	ADDFUNC1(COLOR_ARRAY,NIL,ColorArray,resize,INT,"idx",varray());
 
