@@ -1265,7 +1265,7 @@ void SpatialEditorViewport::_sinput(const InputEvent &p_event) {
 			} else if (m.button_mask&1) {
 
 				if (nav_scheme == NAVIGATION_MAYA && m.mod.alt) {
-					nav_mode = NAVIGATION_ORBIT;				
+					nav_mode = NAVIGATION_ORBIT;
 				} else if (nav_scheme == NAVIGATION_MODO && m.mod.alt && m.mod.shift) {
 					nav_mode = NAVIGATION_PAN;
 				} else if (nav_scheme == NAVIGATION_MODO && m.mod.alt && m.mod.control) {
@@ -1631,8 +1631,11 @@ void SpatialEditorViewport::_sinput(const InputEvent &p_event) {
 						_edit.snap=true;
 					}
 				} break;
+				case KEY_7:
 				case KEY_KP_7: {
-
+					bool emulate_numpad = EditorSettings::get_singleton()->get("3d_editor/emulate_numpad");
+					if (!emulate_numpad && k.scancode==KEY_7)
+						return;
 					cursor.y_rot=0;
 					if (k.mod.shift) {
 						cursor.x_rot=-Math_PI/2.0;
@@ -1647,8 +1650,11 @@ void SpatialEditorViewport::_sinput(const InputEvent &p_event) {
 						_update_name();
 					}
 				} break;
+				case KEY_1:
 				case KEY_KP_1: {
-
+					bool emulate_numpad = EditorSettings::get_singleton()->get("3d_editor/emulate_numpad");
+					if (!emulate_numpad && k.scancode==KEY_1)
+						return;
 					cursor.x_rot=0;
 					if (k.mod.shift) {
 						cursor.y_rot=Math_PI;
@@ -1664,8 +1670,11 @@ void SpatialEditorViewport::_sinput(const InputEvent &p_event) {
 					}
 
 				} break;
+				case KEY_3:
 				case KEY_KP_3: {
-
+					bool emulate_numpad = EditorSettings::get_singleton()->get("3d_editor/emulate_numpad");
+					if (!emulate_numpad && k.scancode==KEY_3)
+						return;
 					cursor.x_rot=0;
 					if (k.mod.shift) {
 						cursor.y_rot=Math_PI/2.0;
@@ -1680,8 +1689,11 @@ void SpatialEditorViewport::_sinput(const InputEvent &p_event) {
 					}
 
 				} break;
+				case KEY_5:
 				case KEY_KP_5: {
-
+					bool emulate_numpad = EditorSettings::get_singleton()->get("3d_editor/emulate_numpad");
+					if (!emulate_numpad && k.scancode==KEY_5)
+						return;
 
 					//orthogonal = !orthogonal;
 					_menu_option(orthogonal?VIEW_PERSPECTIVE:VIEW_ORTHOGONAL);
@@ -2072,7 +2084,9 @@ void SpatialEditorViewport::_menu_option(int p_option) {
 				count++;
 			}
 
-			center/=float(count);
+			if( count != 0 ) {
+				center/=float(count);
+			}
 
 			cursor.pos=center;
 		} break;
@@ -2184,7 +2198,7 @@ void SpatialEditorViewport::_init_gizmo_instance(int p_idx) {
 		VS::get_singleton()->instance_set_scenario(move_gizmo_instance[i],get_tree()->get_root()->get_world()->get_scenario());
 		VS::get_singleton()->instance_geometry_set_flag(move_gizmo_instance[i],VS::INSTANCE_FLAG_VISIBLE,false);
 		//VS::get_singleton()->instance_geometry_set_flag(move_gizmo_instance[i],VS::INSTANCE_FLAG_DEPH_SCALE,true);
-		VS::get_singleton()->instance_geometry_set_flag(move_gizmo_instance[i],VS::INSTANCE_FLAG_CAST_SHADOW,false);
+		VS::get_singleton()->instance_geometry_set_cast_shadows_setting(move_gizmo_instance[i], VS::SHADOW_CASTING_SETTING_OFF);
 		VS::get_singleton()->instance_set_layer_mask(move_gizmo_instance[i],layer);
 
 		rotate_gizmo_instance[i]=VS::get_singleton()->instance_create();
@@ -2192,7 +2206,7 @@ void SpatialEditorViewport::_init_gizmo_instance(int p_idx) {
 		VS::get_singleton()->instance_set_scenario(rotate_gizmo_instance[i],get_tree()->get_root()->get_world()->get_scenario());
 		VS::get_singleton()->instance_geometry_set_flag(rotate_gizmo_instance[i],VS::INSTANCE_FLAG_VISIBLE,false);
 		//VS::get_singleton()->instance_geometry_set_flag(rotate_gizmo_instance[i],VS::INSTANCE_FLAG_DEPH_SCALE,true);
-		VS::get_singleton()->instance_geometry_set_flag(rotate_gizmo_instance[i],VS::INSTANCE_FLAG_CAST_SHADOW,false);
+		VS::get_singleton()->instance_geometry_set_cast_shadows_setting(rotate_gizmo_instance[i], VS::SHADOW_CASTING_SETTING_OFF);
 		VS::get_singleton()->instance_set_layer_mask(rotate_gizmo_instance[i],layer);
 	}
 
@@ -2573,7 +2587,7 @@ Object *SpatialEditor::_get_editor_data(Object *p_what) {
 
 	si->sp=sp;
 	si->sbox_instance=VisualServer::get_singleton()->instance_create2(selection_box->get_rid(),sp->get_world()->get_scenario());
-	VS::get_singleton()->instance_geometry_set_flag(si->sbox_instance,VS::INSTANCE_FLAG_CAST_SHADOW,false);
+	VS::get_singleton()->instance_geometry_set_cast_shadows_setting(si->sbox_instance, VS::SHADOW_CASTING_SETTING_OFF);
 
 	RID inst = sp->call("_get_visual_instance_rid");
 
@@ -2594,15 +2608,15 @@ void SpatialEditor::_generate_selection_box() {
 	aabb.grow_by( aabb.get_longest_axis_size()/20.0 );
 
 	Ref<SurfaceTool> st = memnew( SurfaceTool );
-	
+
 	st->begin(Mesh::PRIMITIVE_LINES);
 	for (int i=0;i<12;i++) {
-	
+
 		Vector3 a,b;
-		aabb.get_edge(i,a,b); 
-		
+		aabb.get_edge(i,a,b);
+
 		/*Vector<Vector3> points;
-		Vector<Color> colors;		
+		Vector<Color> colors;
 		points.push_back(a);
 		points.push_back(b);*/
 
@@ -2792,7 +2806,7 @@ void SpatialEditor::set_state(const Dictionary& p_state) {
 
 
 void SpatialEditor::edit(Spatial *p_spatial) {
-	
+
 	if (p_spatial!=selected) {
 		if (selected) {
 
@@ -2824,8 +2838,8 @@ void SpatialEditor::edit(Spatial *p_spatial) {
 
 		// should become the selection
 	}
-	
-	
+
+
 }
 
 void SpatialEditor::_xform_dialog_action() {
@@ -3260,8 +3274,8 @@ void SpatialEditor::_init_indicators() {
 			grid_visible[i]=false;
 			grid_enable[i]=false;
 			VisualServer::get_singleton()->instance_geometry_set_flag(grid_instance[i],VS::INSTANCE_FLAG_VISIBLE,false);
-			VisualServer::get_singleton()->instance_geometry_set_flag(grid_instance[i],VS::INSTANCE_FLAG_CAST_SHADOW,false);
-			VS::get_singleton()->instance_set_layer_mask(grid_instance[i],1<<SpatialEditorViewport::GIZMO_GRID_LAYER);
+			VisualServer::get_singleton()->instance_geometry_set_cast_shadows_setting(grid_instance[i], VS::SHADOW_CASTING_SETTING_OFF);
+			VS::get_singleton()->instance_set_layer_mask(grid_instance[i], 1 << SpatialEditorViewport::GIZMO_GRID_LAYER);
 
 
 		}
@@ -3282,7 +3296,7 @@ void SpatialEditor::_init_indicators() {
 		origin_instance = VisualServer::get_singleton()->instance_create2(origin,get_tree()->get_root()->get_world()->get_scenario());
 		VS::get_singleton()->instance_set_layer_mask(origin_instance,1<<SpatialEditorViewport::GIZMO_GRID_LAYER);
 
-		VisualServer::get_singleton()->instance_geometry_set_flag(origin_instance,VS::INSTANCE_FLAG_CAST_SHADOW,false);
+		VisualServer::get_singleton()->instance_geometry_set_cast_shadows_setting(origin_instance, VS::SHADOW_CASTING_SETTING_OFF);
 
 
 
@@ -3319,7 +3333,7 @@ void SpatialEditor::_init_indicators() {
 		cursor_instance = VisualServer::get_singleton()->instance_create2(cursor_mesh,get_tree()->get_root()->get_world()->get_scenario());
 		VS::get_singleton()->instance_set_layer_mask(cursor_instance,1<<SpatialEditorViewport::GIZMO_GRID_LAYER);
 
-		VisualServer::get_singleton()->instance_geometry_set_flag(cursor_instance,VS::INSTANCE_FLAG_CAST_SHADOW,false);
+		VisualServer::get_singleton()->instance_geometry_set_cast_shadows_setting(cursor_instance, VS::SHADOW_CASTING_SETTING_OFF);
 
 
 	}
@@ -3643,27 +3657,25 @@ void SpatialEditor::_request_gizmo(Object* p_obj) {
 	Spatial *sp=p_obj->cast_to<Spatial>();
 	if (!sp)
 		return;
-	if (editor->get_edited_scene() && (sp==editor->get_edited_scene() || sp->get_owner()==editor->get_edited_scene())) {
+	if (editor->get_edited_scene() && (sp==editor->get_edited_scene() || sp->get_owner()==editor->get_edited_scene() || editor->get_edited_scene()->is_editable_instance(sp->get_owner()))) {
 
-		Ref<SpatialEditorGizmo> seg = gizmos->get_gizmo(sp);
+		Ref<SpatialEditorGizmo> seg;
+
+		for(int i=0;i<EditorNode::get_singleton()->get_editor_data().get_editor_plugin_count();i++) {
+
+			seg = EditorNode::get_singleton()->get_editor_data().get_editor_plugin(i)->create_spatial_gizmo(sp);
+			if (seg.is_valid())
+				break;
+		}
+
+		if (!seg.is_valid()) {
+			seg = gizmos->get_gizmo(sp);
+		}
 
 		if (seg.is_valid()) {
 			sp->set_gizmo(seg);
 		}
 
-		for (List<EditorPlugin*>::Element *E=gizmo_plugins.front();E;E=E->next()) {
-
-			if (E->get()->create_spatial_gizmo(sp)) {
-
-				seg = sp->get_gizmo();
-				if (sp==selected && seg.is_valid()) {
-
-					seg->set_selected(true);
-					selected->update_gizmo();
-				}
-				return;
-			}
-		}
 
 		if (seg.is_valid() && sp==selected) {
 			seg->set_selected(true);
@@ -3671,7 +3683,6 @@ void SpatialEditor::_request_gizmo(Object* p_obj) {
 		}
 
 	}
-
 }
 
 void SpatialEditor::_toggle_maximize_view(Object* p_viewport) {
@@ -4158,7 +4169,7 @@ SpatialEditor::~SpatialEditor() {
 void SpatialEditorPlugin::make_visible(bool p_visible) {
 
 	if (p_visible) {
-	
+
 
 		spatial_editor->show();
 		spatial_editor->set_process(true);
@@ -4166,7 +4177,7 @@ void SpatialEditorPlugin::make_visible(bool p_visible) {
 		spatial_editor->grab_focus();
 
 	} else {
-	
+
 		spatial_editor->hide();
 		spatial_editor->set_process(false);
 		//VisualServer::get_singleton()->viewport_set_hide_scenario(editor->get_scene_root()->get_viewport(),true);
@@ -4180,7 +4191,7 @@ void SpatialEditorPlugin::edit(Object *p_object) {
 }
 
 bool SpatialEditorPlugin::handles(Object *p_object) const {
-	
+
 	return p_object->is_type("Spatial");
 }
 
@@ -4214,11 +4225,13 @@ void SpatialEditorPlugin::snap_cursor_to_plane(const Plane& p_plane) {
 
 
 SpatialEditorPlugin::SpatialEditorPlugin(EditorNode *p_node) {
-	
+
 	editor=p_node;
 	spatial_editor = memnew( SpatialEditor(p_node) );
+	spatial_editor->set_v_size_flags(Control::SIZE_EXPAND_FILL);
 	editor->get_viewport()->add_child(spatial_editor);
-	spatial_editor->set_area_as_parent_rect();
+
+	//spatial_editor->set_area_as_parent_rect();
 	spatial_editor->hide();
 	spatial_editor->connect("transform_key_request",editor,"_transform_keyed");
 
@@ -4227,8 +4240,5 @@ SpatialEditorPlugin::SpatialEditorPlugin(EditorNode *p_node) {
 
 
 SpatialEditorPlugin::~SpatialEditorPlugin() {
-	
+
 }
-
-
-

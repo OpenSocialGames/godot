@@ -4,7 +4,9 @@
 #include "scene/gui/graph_node.h"
 #include "scene/gui/scroll_bar.h"
 #include "scene/gui/slider.h"
+#include "scene/gui/tool_button.h"
 #include "texture_frame.h"
+
 class GraphEdit;
 
 class GraphEditFilter : public Control {
@@ -35,8 +37,15 @@ public:
 	};
 private:
 
-	TextureFrame* zoom_icon;
-	HSlider* sl_zoom;
+
+	ToolButton *zoom_minus;
+	ToolButton *zoom_reset;
+	ToolButton *zoom_plus;
+
+	void _zoom_minus();
+	void _zoom_reset();
+	void _zoom_plus();
+
 	HScrollBar* h_scroll;
 	VScrollBar* v_scroll;
 
@@ -109,7 +118,7 @@ public:
 
 	void set_right_disconnects(bool p_enable);
 	bool is_right_disconnects_enabled() const;
-	
+
 	Vector2 get_scroll_ofs() const;
 
 

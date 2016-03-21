@@ -49,10 +49,10 @@ friend class CanvasItemEditor;
 	SpinBox *grid_offset_x;
 	SpinBox *grid_offset_y;
 	SpinBox *grid_step_x;
-	SpinBox *grid_step_y;	
-	SpinBox *rotation_offset;	
+	SpinBox *grid_step_y;
+	SpinBox *rotation_offset;
 	SpinBox *rotation_step;
-	
+
 public:
 	SnapDialog() : ConfirmationDialog() {
 		const int SPIN_BOX_GRID_RANGE = 256;
@@ -134,7 +134,7 @@ public:
 		rotation_step->set_suffix("deg");
 		child_container->add_child(rotation_step);
 	}
-	
+
 	void set_fields(const Point2 p_grid_offset, const Size2 p_grid_step, const float p_rotation_offset, const float p_rotation_step) {
 		grid_offset_x->set_val(p_grid_offset.x);
 		grid_offset_y->set_val(p_grid_offset.y);
@@ -143,7 +143,7 @@ public:
 		rotation_offset->set_val(p_rotation_offset * (180 / Math_PI));
 		rotation_step->set_val(p_rotation_step * (180 / Math_PI));
 	}
-	
+
 	void get_fields(Point2 &p_grid_offset, Size2 &p_grid_step, float &p_rotation_offset, float &p_rotation_step) {
 		p_grid_offset.x = grid_offset_x->get_val();
 		p_grid_offset.y = grid_offset_y->get_val();
@@ -409,7 +409,7 @@ void CanvasItemEditor::_node_removed(Node *p_node) {
 
 void CanvasItemEditor::_keying_changed() {
 
-	if (AnimationPlayerEditor::singleton->get_key_editor()->has_keying())
+	if (AnimationPlayerEditor::singleton->get_key_editor()->is_visible())
 		animation_hb->show();
 	else
 		animation_hb->hide();
@@ -1328,7 +1328,7 @@ void CanvasItemEditor::_viewport_input_event(const InputEvent& p_event) {
 							first=false;
 						}
 
-						BoneIK bik;						
+						BoneIK bik;
 						bik.node=b;
 						bik.len=len;
 						bik.orig_state=b->edit_get_state();
@@ -1560,7 +1560,7 @@ void CanvasItemEditor::_viewport_input_event(const InputEvent& p_event) {
 					Matrix32 rot;
 					rot.elements[1] = (dfrom - center).normalized();
 					rot.elements[0] = rot.elements[1].tangent();
-					node->set_rot(snap_angle(rot.xform_inv(dto-center).angle(), node->get_rot()));
+					node->set_rot(snap_angle(rot.xform_inv(dto-center).angle() + node->get_rot(), node->get_rot()));
 					display_rotate_to = dto;
 					display_rotate_from = center;
 					viewport->update();
@@ -2233,6 +2233,8 @@ void CanvasItemEditor::_notification(int p_what) {
 		p->add_icon_item(get_icon("ControlAlignWide","EditorIcons"),"Full Rect",ANCHOR_ALIGN_WIDE);
 
 
+		AnimationPlayerEditor::singleton->get_key_editor()->connect("visibility_changed",this,"_keying_changed");
+		_keying_changed();
 	}
 
 	if (p_what==NOTIFICATION_READY) {
@@ -2668,7 +2670,7 @@ void CanvasItemEditor::_popup_callback(int p_op) {
 			}
 #endif
 		} break;
-		
+
 		case SPACE_HORIZONTAL: {
 			//space_selected_items< proj_vector2_x, compare_items_x >();
 		} break;
@@ -3162,7 +3164,7 @@ bool CanvasItemEditor::box_selection_end() {
 			SWAP(bsfrom.x,bsto.x);
 		if (bsfrom.y>bsto.y)
 			SWAP(bsfrom.y,bsto.y);
-		
+
 		if ( bsfrom.distance_to( bsto ) < 3 ) {
 			print_line( "box selection too small" );
 			box_selecting=false;
@@ -3181,7 +3183,7 @@ bool CanvasItemEditor::box_selection_end() {
 
 	box_selecting=false;
 	viewport->update();
-	
+
 	return true;
 }
 #endif
@@ -3477,7 +3479,7 @@ CanvasItemEditor::CanvasItemEditor(EditorNode *p_editor) {
 	box_selecting=false;
 	//zoom=0.5;
 	singleton=this;
-	AnimationPlayerEditor::singleton->get_key_editor()->connect("keying_changed",this,"_keying_changed");
+
 	set_process_unhandled_key_input(true);
 	can_move_pivot=false;
 	drag=DRAG_NONE;
@@ -3528,6 +3530,7 @@ CanvasItemEditorPlugin::CanvasItemEditorPlugin(EditorNode *p_node) {
 
 	editor=p_node;
 	canvas_item_editor = memnew( CanvasItemEditor(editor) );
+	canvas_item_editor->set_v_size_flags(Control::SIZE_EXPAND_FILL);
 	editor->get_viewport()->add_child(canvas_item_editor);
 	canvas_item_editor->set_area_as_parent_rect();
 	canvas_item_editor->hide();

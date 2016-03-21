@@ -101,6 +101,19 @@ class EditorNode : public Node {
 
 	OBJ_TYPE( EditorNode, Node );
 
+public:
+	enum DockSlot {
+		DOCK_SLOT_LEFT_UL,
+		DOCK_SLOT_LEFT_BL,
+		DOCK_SLOT_LEFT_UR,
+		DOCK_SLOT_LEFT_BR,
+		DOCK_SLOT_RIGHT_UL,
+		DOCK_SLOT_RIGHT_BL,
+		DOCK_SLOT_RIGHT_UR,
+		DOCK_SLOT_RIGHT_BR,
+		DOCK_SLOT_MAX
+	};
+private:
 	enum {
 		HISTORY_SIZE=64
 	};
@@ -182,17 +195,6 @@ class EditorNode : public Node {
 		OBJECT_METHOD_BASE=500
 	};
 
-	enum DockSlot {
-		DOCK_SLOT_LEFT_UL,
-		DOCK_SLOT_LEFT_BL,
-		DOCK_SLOT_LEFT_UR,
-		DOCK_SLOT_LEFT_BR,
-		DOCK_SLOT_RIGHT_UL,
-		DOCK_SLOT_RIGHT_BL,
-		DOCK_SLOT_RIGHT_UR,
-		DOCK_SLOT_RIGHT_BR,
-		DOCK_SLOT_MAX
-	};
 
 
 	//Node *edited_scene; //scene being edited
@@ -258,7 +260,7 @@ class EditorNode : public Node {
 	TextEdit *load_errors;
 	AcceptDialog *load_error_dialog;
 
-	Control *scene_root_base;
+	//Control *scene_root_base;
 	Ref<Theme> theme;
 
 	PopupMenu *recent_scenes;
@@ -355,6 +357,7 @@ class EditorNode : public Node {
 	Object *current;
 
 	bool _playing_edited;
+	String run_custom_filename;
 	bool reference_resource_mem;
 	bool save_external_resources_mem;
 	uint64_t saved_version;
@@ -399,13 +402,13 @@ class EditorNode : public Node {
 	String external_file;
 	List<String> previous_scenes;
 	bool opening_prev;
-	
+
 	void _dialog_action(String p_file);
 
 
 	void _edit_current();
 	void _dialog_display_file_error(String p_file,Error p_error);
-	
+
 	int current_option;
 	//void _animation_visibility_toggle();
 	void _resource_created();
@@ -420,7 +423,7 @@ class EditorNode : public Node {
 	void _select_history(int p_idx);
 	void _prepare_history();
 
-	
+
 	void _fs_changed();
 	void _sources_changed(bool p_exist);
 	void _imported(Node *p_node);
@@ -447,7 +450,7 @@ class EditorNode : public Node {
 
 	void _hide_top_editors();
 	void _quick_opened();
-	void _quick_run(const String& p_resource);
+	void _quick_run();
 
 	void _run(bool p_current=false, const String &p_custom="");
 
@@ -477,6 +480,10 @@ class EditorNode : public Node {
 	Set<EditorFileDialog*> editor_file_dialogs;
 
 	Map<String,Ref<Texture> > icon_type_cache;
+
+	bool _initializing_addons;
+	Map<String,EditorPlugin*> plugin_addons;
+
 
 	static Ref<Texture> _file_dialog_get_icon(const String& p_path);
 	static void _file_dialog_register(FileDialog *p_dialog);
@@ -540,6 +547,8 @@ class EditorNode : public Node {
 	void _load_docks();
 	void _save_docks_to_config(Ref<ConfigFile> p_layout, const String& p_section);
 	void _load_docks_from_config(Ref<ConfigFile> p_layout, const String& p_section);
+	void _update_dock_slots_visibility();
+
 
 	void _update_layouts_menu();
 	void _layout_menu_option(int p_idx);
@@ -547,6 +556,9 @@ class EditorNode : public Node {
 	void _toggle_search_bar(bool p_pressed);
 	void _clear_search_box();
 	void _clear_undo_history();
+
+	void _update_addon_config();
+
 
 protected:
 	void _notification(int p_what);
@@ -569,9 +581,14 @@ public:
 	static void add_editor_plugin(EditorPlugin *p_editor);
 	static void remove_editor_plugin(EditorPlugin *p_editor);
 
+	void add_control_to_dock(DockSlot p_slot,Control* p_control);
+	void remove_control_from_dock(Control* p_control);
+
 	void add_editor_import_plugin(const Ref<EditorImportPlugin>& p_editor_import);
 	void remove_editor_import_plugin(const Ref<EditorImportPlugin>& p_editor_import);
 
+	void set_addon_plugin_enabled(const String& p_addon,bool p_enabled);
+	bool is_addon_plugin_enabled(const String &p_addon) const;
 
 	void edit_node(Node *p_node);
 	void edit_resource(const Ref<Resource>& p_resource);
@@ -638,7 +655,7 @@ public:
 	Ref<Theme> get_editor_theme() const { return theme; }
 
 
-	void show_warning(const String& p_text);
+	void show_warning(const String& p_text,const String& p_title="Warning!");
 
 
 	Error export_platform(const String& p_platform, const String& p_path, bool p_debug,const String& p_password,bool p_quit_after=false);
@@ -674,8 +691,9 @@ public:
 	void make_bottom_panel_item_visible(Control *p_item);
 	void raise_bottom_panel_item(Control *p_item);
 	void hide_bottom_panel();
+	void remove_bottom_panel_item(Control *p_item);
 
-	EditorNode();	
+	EditorNode();
 	~EditorNode();
 	void get_singleton(const char* arg1, bool arg2);
 
